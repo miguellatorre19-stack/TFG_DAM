@@ -1,0 +1,40 @@
+services:
+  db:
+    image: mariadb:11.8
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${PROD_DB_NAME:?missing}
+      MARIADB_USER: ${PROD_DB_USER:?missing}
+      MARIADB_PASSWORD: ${PROD_DB_PASSWORD:?missing}
+      MARIADB_ROOT_PASSWORD: ${PROD_DB_ROOT_PASSWORD:?missing}
+    healthcheck:
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - db_data:/var/lib/mysql
+
+  asociation-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: apiman-asociation
+    restart: unless-stopped
+    ports:
+      - "8085:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      PROD_DB_HOST: db
+      PROD_DB_PORT: 3306
+      PROD_DB_NAME: ${PROD_DB_NAME:?missing}
+      PROD_DB_USER: ${PROD_DB_USER:?missing}
+      PROD_DB_PASSWORD: ${PROD_DB_PASSWORD:?missing}
+
+volumes:
+  db_data:
+

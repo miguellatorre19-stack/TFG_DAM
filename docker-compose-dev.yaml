@@ -1,0 +1,41 @@
+services:
+  db:
+    image: mariadb:11.8
+    container_name: asociation-dev-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DEV_DB_NAME:?missing}
+      MARIADB_USER: ${DEV_DB_USER:?missing}
+      MARIADB_PASSWORD: ${DEV_DB_PASSWORD:?missing}
+      MARIADB_ROOT_PASSWORD: ${DEV_DB_ROOT_PASSWORD:?missing}
+    ports:
+      - "${DEV_DB_PORT:-3306}:3306"
+    healthcheck:
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - db_data_dev:/var/lib/mysql
+
+  asociation-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: asociation-api:dev
+    container_name: asociation-dev-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DEV_DB_HOST: db
+      DEV_DB_PORT: 3306
+      DEV_DB_NAME: ${DEV_DB_NAME:?missing}
+
+volumes:
+  db_data_dev:

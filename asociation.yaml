@@ -1,0 +1,2755 @@
+openapi: 3.0.1
+info:
+  title: API asociation
+  version: 1.0.0
+  description: API for memebership and activities of an asociation
+servers:
+  - url: 'https://api.example.com/api'
+paths:
+  /v1/socios:
+    get:
+      summary: Devuelve lista de socios
+      description: | 
+                  Devuelve una lista de todos los socios miembros de la asociacion
+                  se permite filtrar por 3 campos simultáneamente: 
+                    -familyModel
+                    -active
+                    -entryDate
+      parameters:
+        - name: familyModel
+          in: query
+          description: Filtro por modelo familiar
+          required: false
+          schema:
+            type: string
+            example: Nuclear
+
+        - name: active
+          in: query
+          description: Filtro por estado de activo
+          required: false
+          schema:
+            type: boolean
+            example:
+              value: true
+
+        - name: entryDate
+          in: query
+          description: Filtro por fecha de entrada (filtra todos los socios que entraron después)
+          required: false
+          schema:
+            type: string
+            format: date
+            example: '2025-04-07'
+
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SocioDto'
+              examples:
+                CasoÉxito1:
+                  $ref: '#/components/examples/socioDtoExample1'
+                CasoÉxito2:
+                  $ref: '#/components/examples/socioDtoExample2'
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    post:
+      summary: Sube un nuevo socio
+      description: Añadir nuevo socio al registro
+      requestBody:
+        description: Datos del Socio
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Socio'
+            examples:
+              Caso1:
+                $ref: '#/components/examples/socioExample1'
+              Caso2:
+                $ref: '#/components/examples/socioExample2'
+              BadCase:
+                $ref: '#/components/examples/socioExampleBad'
+      responses:
+        201:
+          description: Socio creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Socio'
+              examples:
+                  CasoÉxito1:
+                    $ref: '#/components/examples/socioExample1'
+                  CasoÉxito2:
+                    $ref: '#/components/examples/socioExample2'
+        400:
+          description: Error en campos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400*'
+        409:
+          description: Socio ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v2/socios:
+    get:
+      summary: Devuelve lista de socios
+      description: |
+        Devuelve una lista de todos los socios miembros de la asociacion
+        se permite filtrar por 2 campos simultáneamente: 
+          -familyModel
+          -entryDate
+      parameters:
+        - name: familyModel
+          in: query
+          description: Filtro por modelo familiar
+          required: false
+          schema:
+            type: string
+            example: Nuclear
+
+        - name: entryDate
+          in: query
+          description: Filtro por fecha de entrada (filtra todos los socios que entraron después)
+          required: false
+          schema:
+            type: string
+            format: date
+            example: '2025-04-07'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SocioOutDtoV2'
+              examples:
+                CasoÉxito1:
+                  $ref: '#/components/examples/SocioOutDtoV2Example1'
+                CasoÉxito2:
+                  $ref: '#/components/examples/SocioOutDtoV2Example2'
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    post:
+      summary: Sube un nuevo socio
+      description: Añadir nuevo socio al registro
+      requestBody:
+        description: Datos del Socio
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Socio'
+            examples:
+              Caso1:
+                $ref: '#/components/examples/socioExample1'
+              Caso2:
+                $ref: '#/components/examples/socioExample2'
+              BadCase:
+                $ref: '#/components/examples/socioExampleBad'
+      responses:
+        201:
+          description: Socio creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Socio'
+              examples:
+                CasoÉxito1:
+                  $ref: '#/components/examples/socioExample1'
+                CasoÉxito2:
+                  $ref: '#/components/examples/socioExample2'
+        400:
+          description: Error en campos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400*'
+        409:
+          description: Socio ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v1/socios/{id}:
+    get:
+      summary: Devuelve socio por id
+      description: Busca el socio individual que tiene el id indicado
+      responses:
+        200 :
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocioDto'
+              examples:
+                Example1:
+                  $ref: '#/components/examples/socioDtoExample1'
+                Example2:
+                  $ref: '#/components/examples/socioDtoExample2'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    put:
+      summary: Editar socio por id
+      description:  Editar socio cuyo id coincide con la búsqueda
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Socio'
+            examples:
+              Example1:
+                $ref: '#/components/examples/socioExample1'
+              Example2:
+                $ref: '#/components/examples/socioExample2'
+              BadCase:
+                $ref: '#/components/examples/socioExampleBad'
+      responses:
+        200:
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Socio'
+              examples:
+                Example:
+                  $ref: '#/components/examples/socioExample1'
+        400:
+          description: Datos editados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400*'
+              example:
+                $ref: '#/components/examples/socioExampleBad'
+        404:
+          description: Socio no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: Conflicto con data ya existente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    delete:
+      summary: Borrar socio por id
+      description: Borrar socio cuyo id coincide con la búsqueda
+      responses:
+        204:
+          description: Borrado exitoso
+        404:
+          description: Socio no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: No se pudo borrar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        '500':
+          description: server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v2/socios/{id}:
+    get:
+      summary: Devuelve socio por id
+      description: Busca el socio individual que tiene el id indicado
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocioDto'
+              examples:
+                Example1:
+                  $ref: '#/components/examples/socioDtoExample1'
+                Example2:
+                  $ref: '#/components/examples/socioDtoExample2'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    put:
+      summary: Editar socio por id
+      description:  Editar socio cuyo id coincide con la búsqueda
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Socio'
+            examples:
+              Example1:
+                $ref: '#/components/examples/socioExample1'
+              Example2:
+                $ref: '#/components/examples/socioExample2'
+              BadCase:
+                $ref: '#/components/examples/socioExampleBad'
+      responses:
+        200:
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Socio'
+              examples:
+                Example:
+                  $ref: '#/components/examples/socioExample1'
+        400:
+          description: Datos editados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400*'
+              example:
+                $ref: '#/components/examples/socioExampleBad'
+        404:
+          description: Socio no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: Conflicto con data ya existente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    delete:
+      summary: Borrar socio por id
+      description: Borrar socio cuyo id coincide con la búsqueda
+      responses:
+        204:
+          description: Borrado exitoso
+        404:
+          description: Socio no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: No se pudo borrar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        '500':
+          description: server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v1/participantes:
+    get:
+      summary: Devuelve lista de participantes
+      description: |
+        Devuelve una lista de todos los participantes miembros de la asociacion
+        se permite filtrar por 3 campos simultáneamente: 
+          -typeRel
+          -name
+          -birthDate
+      parameters:
+        - name: typeRel
+          in: query
+          description: Filtro por tipo de relación
+          required: false
+          schema:
+            type: string
+          example: cónjuge
+        - name: name
+          in: query
+          description: Filtro por nombre (iniciales)
+          required: false
+          schema:
+            type: string
+          example: Juanjo
+        - name: birthDate
+          in: query
+          description: Filtro por fecha de nacimiento (filtra todos los que nacieron después)
+          required: false
+          schema:
+            type: string
+            format: date
+          example: 1983-12-04
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParticipanteOutDto'
+              examples:
+                CasoÉxito1:
+                  $ref: '#/components/examples/participanteExample1'
+                CasoÉxito2:
+                  $ref: '#/components/examples/participanteExample2'
+        404:
+          description: Participante no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v2/participantes:
+    get:
+      summary: Devuelve lista de participantes
+      description: |
+        Devuelve una lista de todos los participantes miembros de la asociacion
+        se permite filtrar por 3 campos simultáneamente:
+          -typeRel
+          -name
+          -birthDate
+      parameters:
+        - name: typeRel
+          in: query
+          description: Filtro por tipo de relación
+          required: false
+          schema:
+            type: string
+          example: cónjuge
+        - name: name
+          in: query
+          description: Filtro por nombre (iniciales)
+          required: false
+          schema:
+            type: string
+          example: Juanjo
+        - name: birthDate
+          in: query
+          description: Filtro por fecha de nacimiento (filtra todos los que nacieron después)
+          required: false
+          schema:
+            type: string
+            format: date
+          example: 1983-12-04
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParticipanteOutDto'
+              examples:
+                CasoÉxito1:
+                  $ref: '#/components/examples/participanteExample1'
+                CasoÉxito2:
+                  $ref: '#/components/examples/participanteExample2'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v2/participantes/{id}:
+    get:
+      summary: Devuelve participante por id
+      description: Busca el participante individual con el id indicado
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipanteDto'
+              examples:
+                  CasoÉxito1:
+                    $ref: '#/components/examples/participanteExample1'
+                  CasoÉxito2:
+                    $ref: '#/components/examples/participanteExample2'
+        404:
+          description: Participante no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+              example:
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    put:
+      summary: Editar participante por id
+      description: Editar participante cuyo id coincide con la búsqueda
+      requestBody:
+        content:
+          application/json:
+            examples:
+              Example1:
+                $ref: '#/components/examples/participanteExample1'
+              Example2:
+                $ref: '#/components/examples/participanteExample2'
+              BadCase:
+                $ref: '#/components/examples/participanteExampleBad'
+      responses:
+        200:
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipanteDto'
+              examples:
+                Example1:
+                  $ref: '#/components/examples/participanteExample1'
+                Example2:
+                  $ref: '#/components/examples/participanteExample2'
+        400:
+          description: Datos editados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400*'
+              example:
+                $ref: '#/components/examples/participanteExampleBad'
+        404:
+          description: Participante no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: Conflicto con data ya existente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    delete:
+      summary: Borrar participante por id
+      description: Borrar participante cuyo id coincide con la búsqueda
+      responses:
+        200:
+          description: dado de baja correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id:
+                    type: integer
+                    format: int64
+                  fecha:
+                    type: string
+                    format: date
+                  reason:
+                    type: string
+                    nullable: true
+              example:
+                message: Dado de baja correctamente
+                id: 1
+                fecha: 2026-04-18
+                reason: null
+        404:
+          description: Participante no encontrado
+        409:
+          description: No se pudo borrar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+              examples:
+                Caso:
+                  $ref: '#/components/examples/participanteExample1'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v1/participantes/{id}:
+    get:
+      summary: Devuelve participante por id
+      description: Busca el participante individual con el id indicado
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipanteDto'
+              examples:
+                CasoÉxito1:
+                  $ref: '#/components/examples/participanteExample1'
+                CasoÉxito2:
+                  $ref: '#/components/examples/participanteExample2'
+        404:
+          description: Participante no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+              example:
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    put:
+      summary: Editar participante por id
+      description: Editar participante cuyo id coincide con la búsqueda
+      requestBody:
+        content:
+          application/json:
+            examples:
+              Example1:
+                $ref: '#/components/examples/participanteExample1'
+              Example2:
+                $ref: '#/components/examples/participanteExample2'
+              BadCase:
+                $ref: '#/components/examples/participanteExampleBad'
+      responses:
+        200:
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipanteDto'
+              examples:
+                Example1:
+                  $ref: '#/components/examples/participanteExample1'
+                Example2:
+                  $ref: '#/components/examples/participanteExample2'
+        400:
+          description: Datos editados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400*'
+              example:
+                $ref: '#/components/examples/participanteExampleBad'
+        404:
+          description: Participante no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: Conflicto con data ya existente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    delete:
+      summary: Borrar participante por id
+      description: Borrar participante cuyo id coincide con la búsqueda
+      responses:
+        204:
+          description: Borrado exitoso
+        404:
+          description: Participante no encontrado
+        409:
+          description: No se pudo borrar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+              examples:
+                Caso:
+                  $ref: '#/components/examples/participanteExample1'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v1/socios/{id}/participante:
+    post:
+      summary: Sube un nuevo participante
+      description: Añadir nuevo participante al registro
+      requestBody:
+        description: Datos del participantes
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParticipanteDto'
+            examples:
+              Example1:
+                $ref: '#/components/examples/participanteExample1'
+              Example2:
+                $ref: '#/components/examples/participanteExample2'
+              BadCase:
+                $ref: '#/components/examples/participanteExampleBad'
+      responses:
+        201:
+          description: Participante creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipanteDto'
+              examples:
+                CasoÉxito1:
+                  $ref: '#/components/examples/participanteExample1'
+                CasoÉxito2:
+                  $ref: '#/components/examples/participanteExample2'
+        400:
+          description: Data not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400*'
+        409:
+          description: Participante ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        404:
+          description: Socio no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v2/socios/{id}/participante:
+    post:
+      summary: Sube un nuevo participante
+      description: Añadir nuevo participante al registro
+      requestBody:
+        description: Datos del participantes
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParticipanteDto'
+            examples:
+              Example1:
+                $ref: '#/components/examples/participanteExample1'
+              Example2:
+                $ref: '#/components/examples/participanteExample2'
+              BadCase:
+                $ref: '#/components/examples/participanteExampleBad'
+      responses:
+        201:
+          description: Participante creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipanteDto'
+              examples:
+                CasoÉxito1:
+                  $ref: '#/components/examples/participanteExample1'
+                CasoÉxito2:
+                  $ref: '#/components/examples/participanteExample2'
+        400:
+          description: Data not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400*'
+        409:
+          description: Participante ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        404:
+          description: Socio no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v1/actividades:
+    get:
+      summary: Devuelve lista de actividades
+      description: |
+        Devuelve una lista de todos las actividades que están anunciadas en la asociacion
+        se permite filtrar por 3 campos simultáneamente: 
+          -duration
+          -canJoin
+          -dayActivity
+      parameters:
+        - name: duration
+          in: query
+          description: Filtro por la duración
+          required: false
+          schema:
+            type: number
+            format: float
+          example:
+            minimum:
+              value: 0
+        - name: canJoin
+          in: query
+          description: Filtro por si es posible apuntarse o no
+          required: false
+          schema:
+            type: boolean
+          example:
+            value: true, false
+
+        - name: dayActivity
+          in: query
+          description: Filtro por fecha de dia (filtra todos las que sucedan ese día)
+          required: false
+          schema:
+            type: string
+            format: date
+          example:
+            value: 2026-03-03
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ActividadOutDto'
+              example:
+                type: array
+                Example1:
+                  $ref: '#/components/examples/actividadExample1'
+                Example2:
+                  $ref: '#/components/examples/actividadExample2'
+        404:
+          description: Actividad no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    post:
+      summary: Sube una nueva actividad
+      description: Añadir nueva actividad al registro
+      requestBody:
+        description: Datos de actividad
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActividadDto'
+            examples:
+              Example1:
+                $ref: '#/components/examples/actividadExample1'
+              Example2:
+                $ref: '#/components/examples/actividadExample2'
+              Badcase:
+                $ref: '#/components/examples/actividadExampleBad'
+      responses:
+        201:
+          description: Actividad creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActividadOutDto'
+              examples:
+                Example1:
+                  $ref: '#/components/examples/actividadExample1'
+                Example2:
+                  $ref: '#/components/examples/actividadExample2'
+        400:
+          description: Data not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400**'
+        409:
+          description: Actividad ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+              example:
+                Caso1:
+                  value:
+                    $ref: '#/components/examples/actividadExample1'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v2/actividades:
+    get:
+      summary: Devuelve lista de actividades
+      description: |
+        Devuelve una lista de todos las actividades que están anunciadas en la asociacion
+        se permite filtrar por 3 campos simultáneamente: 
+          -capacity
+          -canJoin
+          -dayActivity
+      parameters:
+        - name: capacity
+          in: query
+          description: Filtro por la capacidad
+          required: false
+          schema:
+            type: integer
+          example:
+            minimum:
+              value: 0
+        - name: canJoin
+          in: query
+          description: Filtro por si es posible apuntarse o no
+          required: false
+          schema:
+            type: boolean
+          example:
+            value: true
+        - name: dayActivity
+          in: query
+          description: Filtro por fecha de dia (filtra todos las que sucedan ese día)
+          required: false
+          schema:
+            type: string
+            format: date
+          example:
+            value: 2026-03-03
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ActividadOutDto'
+              example:
+                type: array
+                Example1:
+                  $ref: '#/components/examples/actividadExample1'
+                Example2:
+                  $ref: '#/components/examples/actividadExample2'
+        404:
+          description: Actividad no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    post:
+      summary: Sube una nueva actividad
+      description: Añadir nueva actividad al registro
+      requestBody:
+        description: Datos de actividad
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActividadDtoV2'
+            examples:
+              Example1:
+                $ref: '#/components/examples/actividadV2Example1'
+              Example2:
+                $ref: '#/components/examples/actividadV2Example2'
+              Badcase:
+                $ref: '#/components/examples/actividadV2ExampleBad'
+      responses:
+        201:
+          description: Actividad creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActividadOutDtoV2'
+              examples:
+                Example1:
+                  $ref: '#/components/examples/actividadExample1'
+                Example2:
+                  $ref: '#/components/examples/actividadExample2'
+        400:
+          description: Data not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400**'
+        409:
+          description: Actividad ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+              example:
+                Caso1:
+                  value:
+                    $ref: '#/components/examples/actividadExample1'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v2/actividades/{id}:
+    get:
+      summary: Devuelve actividad por id
+      description: Busca la actividad individual con el id indicado
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActividadOutDto'
+              examples:
+                Caso1:
+                  value:
+                    $ref: '#/components/examples/actividadExample1'
+                Caso2:
+                  value:
+                    $ref: '#/components/examples/actividadExample2'
+        404:
+          description: Actividad no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    put:
+      summary: Editar actividad por id
+      description: Editar actividad cuyo id coincide con la búsqueda
+      requestBody:
+        description: Datos de actividad
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActividadDtoV2'
+            examples:
+              Example1:
+                $ref: '#/components/examples/actividadV2Example1'
+              Example2:
+                $ref: '#/components/examples/actividadV2Example2'
+              Badcase:
+                $ref: '#/components/examples/actividadV2ExampleBad'
+      responses:
+        200:
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActividadOutDtoV2'
+              examples:
+                Example1:
+                  $ref: '#/components/examples/actividadExample1'
+                Example2:
+                  $ref: '#/components/examples/actividadExample2'
+        400:
+          description: Datos editados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400**'
+        404:
+          description: Actividad no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: Conflicto con data ya existente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    delete:
+      summary: Borrar actividad por id
+      description: Borrar actividad cuyo id coincide con la búsqueda
+      responses:
+        204:
+          description: Borrado exitoso
+        404:
+          description: Actividad no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: No se pudo borrar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v2/actividades/{id}/inscripciones:
+    post:
+      summary: Inscribir participante en actividad
+      description: Crea una inscripción para un participante en la actividad indicada
+      requestBody:
+        description: ID del participante a inscribir
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InscripcionActividadRequestDto'
+      responses:
+        201:
+          description: Inscripción creada
+        400:
+          description: Data not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400**'
+        404:
+          description: Recurso no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: Conflicto de negocio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v2/actividades/{id}/inscripciones/{participanteId}:
+    delete:
+      summary: Desinscribir participante de actividad
+      description: Elimina la inscripción del participante en la actividad indicada
+      responses:
+        204:
+          description: Borrado exitoso
+        404:
+          description: Recurso no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: Conflicto de negocio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v2/actividades/{id}/participantes:
+    get:
+      summary: Devuelve participantes de una actividad
+      description: Lista los participantes inscritos en la actividad indicada
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParticipanteDto'
+        404:
+          description: Actividad no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v1/actividades/{id}:
+    get:
+      summary: Devuelve actividad por id
+      description: Busca la actividad individual con el id indicado
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActividadOutDto'
+              examples:
+                Caso1:
+                  value:
+                    $ref: '#/components/examples/actividadExample1'
+                Caso2:
+                  value:
+                    $ref: '#/components/examples/actividadExample2'
+        404:
+          description: Actividad no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    put:
+      summary: Editar actividad por id
+      description: Editar actividad cuyo id coincide con la búsqueda
+      requestBody:
+        description: Datos de actividad
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Actividad'
+            examples:
+              Example1:
+                $ref: '#/components/examples/actividadExample1'
+              Example2:
+                $ref: '#/components/examples/actividadExample2'
+              Badcase:
+                $ref: '#/components/examples/actividadExampleBad'
+      responses:
+        200:
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Actividad'
+              examples:
+                Example1:
+                  $ref: '#/components/examples/actividadExample1'
+                Example2:
+                  $ref: '#/components/examples/actividadExample2'
+        400:
+          description: Datos editados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400**'
+        404:
+          description: Actividad no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: Conflicto con data ya existente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+              examples:
+                Example1:
+                  $ref: '#/components/examples/actividadExample1'
+                Example2:
+                  $ref: '#/components/examples/actividadExample2'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    delete:
+      summary: Borrar actividad por id
+      description: Borrar actividad cuyo id coincide con la búsqueda
+      responses:
+        204:
+          description: Borrado exitoso
+        404:
+          description: Actividad no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: No se pudo borrar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v1/actividades/{id}/inscripciones:
+    post:
+      summary: Inscribir participante en actividad
+      description: Crea una inscripción para un participante en la actividad indicada
+      requestBody:
+        description: ID del participante a inscribir
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InscripcionActividadRequestDto'
+      responses:
+        201:
+          description: Inscripción creada
+        400:
+          description: Data not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400**'
+        404:
+          description: Recurso no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: Conflicto de negocio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v1/actividades/{id}/inscripciones/{participanteId}:
+    delete:
+      summary: Desinscribir participante de actividad
+      description: Elimina la inscripción del participante en la actividad indicada
+      responses:
+        204:
+          description: Borrado exitoso
+        404:
+          description: Recurso no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: Conflicto de negocio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v1/actividades/{id}/participantes:
+    get:
+      summary: Devuelve participantes de una actividad
+      description: Lista los participantes inscritos en la actividad indicada
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParticipanteDto'
+        404:
+          description: Actividad no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v1/servicios:
+    get:
+      summary: Devuelve lista de servicios
+      description: |
+        Devuelve una lista de todos los servicios disponibles en la asociacion
+        se permite filtrar por 3 campos simultáneamente: 
+          -periodicity
+          -capacity
+          -duration
+      parameters:
+        - name: periodicity
+          in: query
+          description: Filtro por la periodicidad de servicio
+          required: false
+          schema:
+            type: string
+          example:
+            value: semanal
+        - name: capacity
+          in: query
+          description: Filtro por el número de gente que puede estar presente
+          required: false
+          schema:
+            type: integer
+          example:
+            minimum:
+              value : 0
+        - name: duration
+          in: query
+          description: Filtro por fecha de nacimiento (filtra todos los que nacieron después)
+          required: false
+          schema:
+            type: number
+            format: float
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ServicioOutDto'
+              example:
+                Example1:
+                  $ref: '#/components/examples/servicioExample1'
+                Example2:
+                  $ref: '#/components/examples/servicioExample2'
+        404:
+          description: Servicio no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    post:
+      summary: Sube un nuevo servicio
+      description: Añadir nuevo servicio al registro
+      requestBody:
+        description: Datos del servicio
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServicioDto'
+            examples:
+              Example1:
+                $ref: '#/components/examples/servicioExample1'
+              Example2:
+                $ref: '#/components/examples/servicioExample2'
+              BadCase:
+                $ref: '#/components/examples/servicioExampleBad'
+      responses:
+        201:
+          description: Servicio creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicioOutDto'
+              examples:
+                Example1:
+                  $ref: '#/components/examples/servicioExample1'
+                Example2:
+                  $ref: '#/components/examples/servicioExample2'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400**'
+        409:
+          description: Servicio ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+
+  /v1/servicios/{id}:
+    get:
+      summary: Devuelve servicio por id
+      description: Busca el servicio individual con el id indicado
+      responses:
+        202:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicioOutDto'
+              examples:
+                Example1:
+                  $ref: '#/components/examples/servicioExample1'
+                Example2:
+                  $ref: '#/components/examples/servicioExample2'
+        404:
+          description: Servicio no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    put:
+      summary: Editar servicio por id
+      description: Editar servicio cuyo id coincide con el búsqueda
+      requestBody:
+        description: Datos del servicio
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServicioDto'
+            examples:
+              Example1:
+                $ref: '#/components/examples/servicioExample1'
+              Example2:
+                $ref: '#/components/examples/servicioExample2'
+              BadCase:
+                $ref: '#/components/examples/servicioExampleBad'
+      responses:
+        200:
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicioOutDto'
+              examples:
+                Example1:
+                  $ref: '#/components/examples/servicioExample1'
+                Example2:
+                  $ref: '#/components/examples/servicioExample2'
+        400:
+          description: Datos editados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400**'
+        404:
+          description: Servicio no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: Conflicto con data ya existente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    delete:
+      summary: Borrar servicio por id
+      description: Borrar servicio cuyo id coincide con el búsqueda
+      responses:
+        204:
+          description: Borrado exitoso
+        404:
+          description: Servicio no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: No se pudo borrar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+              example:
+                Caso1:
+                  value:
+                    $ref: '#/components/examples/servicioExample1'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'     
+  /v1/trabajadores:
+    get:
+      summary: Devuelve lista de trabajadores
+      description: |
+        Devuelve una lista de todos los trabajadores que están anunciadas en el asociacion
+        se permite filtrar por 3 campos simultáneamente: 
+          -entryDate
+          -name
+          -contractType
+      parameters:
+        - name: entryDate
+          in: query
+          description: Filtro por fecha de entrada (filtra todos los socios que entraron después)
+          required: false
+          schema:
+            type: string
+            format: date
+          example:
+            value: 2026-03-03
+        - name: name
+          in: query
+          description: Filtro por nombre (iniciales)
+          required: false
+          schema:
+            type: string
+          example:
+            value: Rosana
+        - name: contractType
+          in: query
+          description: Filtro por tipo de contrato
+          required: false
+          schema:
+            type: string
+          example:
+            value: Tiempo Parcial
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrabajadorOutDto'
+              examples:
+                Example1:
+                  $ref: '#/components/examples/trabajadoresExample1'
+                Example2:
+                  $ref: '#/components/examples/trabajadoresExample2'
+        404:
+          description: Trabajador no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v1/servicios/{id}/trabajadores:
+    post:
+      summary: Sube un nuevo trabajador
+      description: Añadir nuevo trabajador al registro
+      requestBody:
+        description: Datos del trabajador
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrabajadorDto'
+            examples:
+              Example1:
+                $ref: '#/components/examples/trabajadoresExample1'
+              Example2:
+                $ref: '#/components/examples/trabajadoresExample2'
+              BadCase:
+                $ref: '#/components/examples/trabajadorExampleBad'
+      responses:
+        201:
+          description: Trabajador creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrabajadorOutDto'
+              examples:
+                Example1:
+                  $ref: '#/components/examples/trabajadoresExample1'
+                Example2:
+                  $ref: '#/components/examples/trabajadoresExample2'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400*'
+        409:
+          description: Trabajador ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+  /v1/trabajadores/{id}:
+    get:
+      summary: Devuelve trabajador por id
+      description: Busca el trabajador individual con el id indicado
+      responses:
+        202:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrabajadorOutDto'
+              examples:
+                Caso1:
+                    $ref: '#/components/examples/trabajadoresExample1'
+                Caso2:
+                  $ref: '#/components/examples/trabajadoresExample2'
+        404:
+          description: Trabajador no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    put:
+      summary: Editar trabajador por id
+      description: Editar trabajador cuyo id coincide con el búsqueda
+      requestBody:
+        description: Datos del trabajador
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrabajadorDto'
+            examples:
+              Example1:
+                $ref: '#/components/examples/trabajadoresExample1'
+              Example2:
+                $ref: '#/components/examples/trabajadoresExample2'
+              BadCase:
+                $ref: '#/components/examples/trabajadorExampleBad'
+      responses:
+        200:
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrabajadorOutDto'
+              examples:
+                Caso1:
+                  $ref: '#/components/examples/trabajadoresExample1'
+                Caso2:
+                  $ref: '#/components/examples/trabajadoresExample2'
+        400:
+          description: Datos editados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest400*'
+        404:
+          description: Trabajador no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: Conflicto con data ya existente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+              example:
+                Caso:
+                  value:
+                    $ref: '#/components/examples/trabajadoresExample1'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+    delete:
+      summary: Borrar trabajador por id
+      description: Borrar trabajador cuyo id coincide con el búsqueda
+      responses:
+        204:
+          description: Borrado exitoso
+        404:
+          description: Trabajador no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError 404'
+        409:
+          description: No se pudo borrar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict 409'
+              examples:
+                Caso1:
+                  $ref: '#/components/examples/trabajadoresExample1'
+                Caso2:
+                  $ref: '#/components/examples/trabajadoresExample2'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError 500'
+components:
+  schemas:
+    Socio:
+      type: object
+      required: [dni, name, surname, email, phoneNumber]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: id de socio
+        dni:
+          type: string
+          pattern: '^[0-9]{8}[A-Z]$'
+          description: dni de socio
+        name:
+          type: string
+          description: nombre de socio
+        surname:
+          type: string
+          description: apellidos de socio
+        email:
+          type: string
+          format: email
+          description: email de socio
+        address:
+          type: string
+          description: direccion de vivienda de socio
+        phoneNumber:
+          type: string
+          pattern: '^\d{3}-\d{3}-\d{3}$'
+          description: nº de telefono de socio
+        familyModel:
+          type: string
+          description: tipo de modelo familiar
+        active:
+          type: boolean
+          description: socio está activo o no
+        entryDate:
+          type: string
+          format: date
+          description: fecha de alta de socio
+        outDate:
+          type: string
+          format: date
+          nullable: true
+          description: fecha de baja de socio
+    SocioDto:
+      type: object
+      properties:
+        id:
+          description: id de socio
+          type: integer
+          format: int64
+        dni:
+          description: dni de socio
+          type: string
+          pattern: '^[0-9]{8}[A-Z]$'
+        name:
+          description: nombre de socio
+          type: string
+        surname:
+          description: apellidos de socio
+          type: string
+        email:
+          description: email de socio
+          type: string
+          format: email
+        phoneNumber:
+          description: nº de telefono de socio
+          type: string
+          pattern: '^\d{3}-\d{3}-\d{3}$'
+        familyModel:
+          description: tipo de modelo familiar
+          type: string
+        active:
+          description: socio está activo o no
+          type: boolean
+        entryDate:
+          description: fecha de alta de socio
+          type: string
+          format: date
+        participanteDtoList:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParticipanteDto'
+    Participante:
+      type: object
+      properties:
+        id:
+          description: id de participante
+          type: integer
+          format: int64
+        dni:
+          description: dni de participante
+          type: string
+          pattern: '^[0-9]{8}[A-Z]$'
+        name:
+          description: nombre de participante
+          type: string
+        surname:
+          description: apellido de participante
+          type: string
+        email:
+          type: string
+          format: email
+          description: email de participante
+        phoneNumber:
+          description: nº de telefono de participante
+          type: string
+          pattern: '^\d{3}-\d{3}-\d{3}$'
+        birthDate:
+          description: fecha de nacimiento de participante
+          type: string
+          format: date
+        entryDate:
+          description: fecha de alta de participante
+          type: string
+          format: date
+        needs:
+          description: necesidades especiales de participante
+          type: string
+        typeRel:
+          description: tipo de relación del participante respecto a su socio
+          type: string
+        active:
+          description: participante activo
+          type: boolean
+        reason:
+          description: motivo de baja
+          type: string
+        outDate:
+          description: fecha de baja
+          type: string
+          format: date
+    ParticipanteDto:
+      type: object
+      properties:
+        dni:
+          description: dni de participante
+          type: string
+          pattern: '^[0-9]{8}[A-Z]$'
+        name:
+          description: nombre de participante
+          type: string
+        surname:
+          description: apellido de participante
+          type: string
+        email:
+          type: string
+          format: email
+          description: email de participante
+        phoneNumber:
+          description: nº de telefono de participante
+          type: string
+          pattern: '^\d{3}-\d{3}-\d{3}$'
+        birthDate:
+          description: fecha de nacimiento de participante
+          type: string
+          format: date
+        needs:
+          description: necesidades especiales de participante
+          type: string
+        typeRel:
+          description: tipo de relación del participante respecto a su socio
+          type: string
+        socioID:
+          description: id del socio asociado
+          type: integer
+          format: int64
+    ParticipanteOutDto:
+      type: object
+      properties:
+        id:
+          description: id de participante
+          type: integer
+          format: int64
+        dni:
+          description: dni de participante
+          type: string
+          pattern: '^[0-9]{8}[A-Z]$'
+        name:
+          description: nombre de participante
+          type: string
+        surname:
+          description: apellido de participante
+          type: string
+        email:
+          type: string
+          format: email
+          description: email de participante
+        phoneNumber:
+          description: nº de telefono de participante
+          type: string
+          pattern: '^\d{3}-\d{3}-\d{3}$'
+        birthDate:
+          description: fecha de nacimiento de participante
+          type: string
+          format: date
+        needs:
+          description: necesidades especiales de participante
+          type: string
+        typeRel:
+          description: tipo de relación del participante respecto a su socio
+          type: string
+        socioID:
+          description: id del socio asociado
+          type: integer
+          format: int64
+    Actividad:
+      type: object
+      required: [description, dayActivity, typeActivity, duration, canJoin, capacity]
+      properties:
+        id:
+          description: id de actividad
+          type: integer
+          format: int64
+        description:
+          description: descripción de la actividad
+          type: string
+        dayActivity:
+          description: dia de la actividad
+          type: string
+          format: date
+        typeActivity:
+          description: tipo de actividad
+          type: string
+        duration:
+          description: tiempo de duración
+          type: number
+          format: float
+        canJoin:
+          description: el plazo para apuntarse a la actividad está abierto o no
+          type: boolean
+        capacity:
+          description: máximo de personas posible
+          type: integer
+        place:
+          $ref: '#/components/schemas/UbicacionDto'
+    ActividadDto:
+      type: object
+      required: [description, duration, canJoin, capacity]
+      properties:
+        description:
+          description: descripción de la actividad
+          type: string
+        dayActivity:
+          description: dia de la actividad
+          type: string
+          format: date
+        typeActivity:
+          description: tipo de actividad
+          type: string
+        duration:
+          description: tiempo de duración
+          type: number
+          format: float
+        canJoin:
+          description: el plazo para apuntarse a la actividad está abierto o no
+          type: boolean
+        capacity:
+          description: máximo de personas posible
+          type: integer
+    ActividadDtoV2:
+      type: object
+      required: [description, duration, canJoin, capacity, ubicacion]
+      properties:
+        description:
+          description: descripción de la actividad
+          type: string
+        dayActivity:
+          description: dia de la actividad
+          type: string
+          format: date
+        typeActivity:
+          description: tipo de actividad
+          type: string
+        duration:
+          description: tiempo de duración
+          type: number
+          format: float
+        canJoin:
+          description: el plazo para apuntarse a la actividad está abierto o no
+          type: boolean
+        capacity:
+          description: máximo de personas posible
+          type: integer
+        ubicacion:
+          $ref: '#/components/schemas/UbicacionDto'
+    ActividadOutDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        description:
+          description: descripción de la actividad
+          type: string
+        dayActivity:
+          description: dia de la actividad
+          type: string
+          format: date
+        duration:
+          description: tiempo de duración
+          type: number
+          format: float
+        canJoin:
+          description: el plazo para apuntarse a la actividad está abierto o no
+          type: boolean
+        participanteDtoList:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParticipanteDto'
+    ActividadOutDtoV2:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        description:
+          description: descripción de la actividad
+          type: string
+        dayActivity:
+          description: dia de la actividad
+          type: string
+          format: date
+        duration:
+          description: tiempo de duración
+          type: number
+          format: float
+        canJoin:
+          description: el plazo para apuntarse a la actividad está abierto o no
+          type: boolean
+        participanteDtoList:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParticipanteDto'
+        ubicacionOutDto:
+          $ref: '#/components/schemas/UbicacionOutDto'
+
+    InscripcionActividadRequestDto:
+      type: object
+      required: [price, state, participanteId]
+      properties:
+        price:
+          type: number
+          format: float
+          description: precio aplicado a la inscripción
+        state:
+          type: string
+          description: estado de la inscripción (por ejemplo ACTIVE)
+        participanteId:
+          type: integer
+          format: int64
+          description: ID del participante a inscribir
+    ServicioDto:
+      type: object
+      required: [description, duration, capacity]
+      properties:
+        description:
+          description: titulo y descripción del servicio
+          type: string
+        periodicity:
+          description: periodicidad en la que el servicio se contrata
+          type: string
+        requisites:
+          description: requisitos necesarios del solicitante
+          type: string
+        duration:
+          description: duración del servicio
+          type: number
+          format: float
+        capacity:
+          description: máximo de personas posible
+          type: integer
+    ServicioOutDto:
+      type: object
+      properties:
+        id:
+          description: id del servicio
+          type: integer
+          format: int64
+        description:
+          description: titulo y descripción del servicio
+          type: string
+        periodicity:
+          description: periodicidad en la que el servicio se contrata
+          type: string
+        requisites:
+          description: requisitos necesarios del solicitante
+          type: string
+        duration:
+          description: duración del servicio
+          type: number
+          format: float
+        capacity:
+          description: máximo de personas posible
+          type: integer
+        TrabajadoresIds:
+          description: lista de ids de los trabajadores asginados a un servicio
+          type: array
+          items:
+            type: integer
+            format: int64
+    TrabajadorDto:
+      type: object
+      properties:
+        dni:
+          description: dni del trabajador
+          type: string
+        name:
+          description: nombre de trabajador
+          type: string
+        surname:
+          description: apellidos de trabajador
+          type: string
+        email:
+          description: email del trabajador
+          type: string
+          format: email
+        phoneNumber:
+          description: nº de telefono de trabajador
+          type: string
+          pattern: '^\d{3}-\d{3}-\d{3}$'
+        birthDate:
+          description: fecha de nacimiento de participante
+          type: string
+          format: date
+        entryDate:
+          description: fecha de alta de trabajador
+          type: string
+          format: date
+        contractType:
+          description: tipo de contrato del trabajador
+          type: string
+        servicioId:
+          description: id del servicio al que el trabajador está asginado
+          type: integer
+          format: int64
+    TrabajadorOutDto:
+      type: object
+      properties:
+        id:
+          description: id del trabajador
+          type: integer
+          format: int64
+        dni:
+          description: dni del trabajador
+          type: string
+        name:
+          description: nombre de trabajador
+          type: string
+        surname:
+          description: apellidos de trabajador
+          type: string
+        email:
+          description: email del trabajador
+          type: string
+          format: email
+        phoneNumber:
+          description: nº de telefono de trabajador
+          type: string
+          pattern: '^\d{3}-\d{3}-\d{3}$'
+        birthDate:
+          description: fecha de nacimiento de participante
+          type: string
+          format: date
+        entryDate:
+          description: fecha de alta de trabajador
+          type: string
+          format: date
+        contractType:
+          description: tipo de contrato del trabajador
+          type: string
+        servicioOutDto:
+          $ref: '#/components/schemas/ServicioOutDto'
+    SocioOutDtoV2:
+      type: object
+      properties:
+        id:
+          description: id de socio
+          type: integer
+          format: int64
+        dni:
+          description: dni de socio
+          type: string
+          pattern: '^[0-9]{8}[A-Z]$'
+        name:
+          description: nombre de socio
+          type: string
+        surname:
+          description: apellidos de socio
+          type: string
+        email:
+          description: email de socio
+          type: string
+          format: email
+        phoneNumber:
+          description: nº de telefono de socio
+          type: string
+          pattern: '^\d{3}-\d{3}-\d{3}$'
+        familyModel:
+          description: tipo de modelo familiar
+        entryDate:
+          description: fecha de alta de socio
+          type: string
+          format: date
+        participanteDtoList:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParticipanteDto'
+    EstadoSocioDto:
+      type: object
+      properties:
+        activo:
+          type: boolean
+        cuotasAlDia:
+          type: boolean
+        importePendiente:
+          type: number
+          format: double
+    UbicacionDto:
+      type: object
+      properties:
+        place_direction:
+          description: direccion de la actividad
+          type: string
+        latitud:
+          description: latitud de la actividad
+          type: number
+          format: double
+        longitud:
+          description: longitud de la actividad
+          type: number
+          format: double
+    UbicacionOutDto:
+      type: object
+      properties:
+        place_direction:
+          description: direccion de la actividad
+          type: string
+    InternalServerError 500:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+      example:
+        code: 500
+        message: Internal server error
+        title: internal-server-error
+    NotFoundError 404:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+      example:
+        code: 404
+        message: Resource could not be found
+        title: not-found
+    BadRequest400*:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+      example:
+        code: 400
+        message: Validation failed for one or more fields
+        title: Bad Request
+        error: "dni : necesita un DNI"
+    BadRequest400**:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+      example:
+        code: 400
+        message: Validation failed for one or more fields
+        title: Bad Request
+        error: "description : necesita una descripción"
+    Conflict 409:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+      example:
+        code: 409
+        message: conflicting events
+        title: conflict
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: codigo de estado
+        message:
+          type: string
+          description: mensaje de error
+        title:
+          type: string
+          description: titulo
+        error:
+          type: object
+          additionalProperties:
+            type: string
+    Response:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: codigo de estado
+        message:
+          type: string
+          description: mensaje de respuesta correcta
+        title:
+          type: string
+          description: titulo
+  examples:
+    socioExample1:
+      value:
+        dni: 23710401V
+        name: ESTRELLA
+        surname: ESPINOSA TIRADO
+        email: plobcspc3@netscape.com
+        address: CAMÍ REAL, 46
+        phoneNumber: 646-857-166
+        familyModel: Monoparental
+        active: true
+        entryDate: 1993-05-20
+    socioExample2:
+      value:
+        dni: 65546640K
+        name: GUADALUPE
+        surname: PIZARRO PUJOL
+        email: 554lqsjtn@netscape.com
+        address: SECTOR ANTONIO MACHADO, 66
+        phoneNumber: 723-619-673
+        familyModel: Nuclear
+        active: false
+        entryDate: 1990-05-20
+    socioDtoExample1:
+      value:
+        id: 1
+        dni: 23710401V
+        name: ESTRELLA
+        surname: ESPINOSA TIRADO
+        email: plobcspc3@netscape.com
+        phoneNumber: 646-857-166
+        familyModel: Monoparental
+        active: true
+        entryDate: 1993-05-20
+    socioDtoExample2:
+      value:
+        id: 2
+        dni: 65546640K
+        name: GUADALUPE
+        surname: PIZARRO PUJOL
+        email: 554lqsjtn@netscape.com
+        phoneNumber: 723-619-673
+        familyModel: Nuclear
+        active: false
+        entryDate: 1990-05-20
+    SocioOutDtoV2Example1:
+      value:
+        dni: 23710401V
+        name: ESTRELLA
+        surname: ESPINOSA TIRADO
+        email: plobcspc3@netscape.com
+        phoneNumber: 646-857-166
+        estadoSocioDto:
+            activo: true
+            cuotasAlDia: false
+            importePendiente: 20.5
+        familyModel: Monoparental
+        entryDate: 1993-05-20
+    SocioOutDtoV2Example2:
+      value:
+        dni: 65546640K
+        name: GUADALUPE
+        surname: PIZARRO PUJOL
+        email: 554lqsjtn@netscape.com
+        address: SECTOR ANTONIO MACHADO, 66
+        phoneNumber: 723-619-673
+        familyModel: Nuclear
+        estadoSocioDto:
+            activo: true
+            cuotasAlDia: true
+            importePendiente: 0.0
+        entryDate: 1990-05-20
+    socioExampleBad:
+      value:
+        dni:
+        name: ESTRELLA
+        surname: ESPINOSA TIRADO
+        email: plobcspc3@netscape.com
+        address: CAMÍ REAL, 46
+        phoneNumber: 646-857-166
+        familyModel: Monoparental
+        active: true
+        entryDate: 1993-05-20
+    participanteExample1:
+      value:
+        dni: 88629258T
+        name: PERE
+        surname: ESPINOSA TIRADO
+        email: i4sglo0w@writeme.com
+        phoneNumber: 639-704-472
+        birthDate: 1978-08-31
+        entryDate: 2004-07-20
+        needs: apoyo psicológico
+        typeRel: hijo
+    participanteExample2:
+      value:
+        dni: 88629258T
+        name: AROA
+        surname: GUERRERO CEBRIAN
+        email: p8lwjm8b@usa.com
+        phoneNumber: 620-488-532
+        birthDate: 2001-06-12
+        entryDate: 20014-11-18
+        needs: null
+        typeRel: null
+    participanteExampleBad:
+      value:
+        dni:
+        name: PERE
+        surname: ESPINOSA TIRADO
+        email: i4sglo0w@writeme.com
+        phoneNumber: 639-704-472
+        birthDate: 1978-08-31
+        entryDate: 2004-07-20
+        needs: apoyo psicológico
+        typeRel: hijo
+    actividadExample1:
+      value:
+        description: ejercicios al aire libre
+        dayActivity: 2026-05-10
+        typeActivity: Grupal
+        duration: 60
+        canJoin: true
+        capacity: 50
+    actividadExample2:
+      value:
+        description: visita a la Aljaferia
+        dayActivity: 2026-02-01
+        typeActivity: Grupal
+        duration: 180
+        canJoin: false
+        capacity: 150
+    actividadExampleBad:
+      value:
+        description:
+        dayActivity: 2026-05-10
+        typeActivity: Grupal
+        duration: 60
+        canJoin: true
+        capacity: 50
+    actividadV2Example1:
+      value:
+        description: ejercicios al aire libre
+        dayActivity: 2026-05-10
+        typeActivity: Grupal
+        duration: 60
+        canJoin: true
+        capacity: 50
+        ubicacion:
+          place_direction: Parque Grande, Zaragoza
+          latitud: 41.6406
+          longitud: -0.8891
+    actividadV2Example2:
+      value:
+        description: visita a la Aljaferia
+        dayActivity: 2026-02-01
+        typeActivity: Grupal
+        duration: 180
+        canJoin: false
+        capacity: 150
+        ubicacion:
+          place_direction: Palacio de la Aljafería, Zaragoza
+          latitud: 41.6565
+          longitud: -0.9072
+    actividadV2ExampleBad:
+      value:
+        description:
+        dayActivity: 2026-05-10
+        typeActivity: Grupal
+        duration: 60
+        canJoin: true
+        capacity: 50
+        ubicacion:
+          place_direction:
+          latitud: 41.6406
+          longitud: -0.8891
+    servicioExample1:
+      value:
+        description: psicólogia
+        periodicity: semanal
+        requisites: cita previa
+        duration: 30
+        capacity: 1
+    servicioExample2:
+      value:
+        description: apoyo escolar
+        periodicity: mensual
+        requisites: ninguno
+        duration: 40
+        capacity: 3
+    servicioExampleBad:
+      value:
+        description:
+        periodicity: semanal
+        requisites: cita previa
+        duration: 30
+        capacity: 1
+    trabajadoresExample1:
+      value:
+        dni: 83547107K
+        name: SIMON
+        surname: MATA MIRANDA
+        email: d7v9feour@aol.com
+        phoneNumber: 635-471-070
+        birthDate: 1982-01-02
+        entryDate: 2020-03-14
+        contractType: Tiempo completo
+        servicioId: 1
+    trabajadoresExample2:
+      value:
+        dni: 51513344Z
+        name: MARIA SOL
+        surname: HURTADO MIGUEL
+        email: vguatrn9lf@msn.com
+        phoneNumber: 615-133-440
+        birthDate: 1961-14-12
+        entryDate: 2024-07-20
+        contractType: Tiempo parcial
+        servicioId: 1
+    trabajadorExampleBad:
+      value:
+        dni:
+        name: SIMON
+        surname: MATA MIRANDA
+        email: d7v9feour@aol.com
+        phoneNumber: 635-471-070
+        birthDate: 1982-01-02
+        entryDate: 2020-03-14
+        contractType: Tiempo completo
+        servicioId: 1
+
