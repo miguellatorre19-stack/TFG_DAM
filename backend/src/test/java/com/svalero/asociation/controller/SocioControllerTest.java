@@ -67,7 +67,7 @@ public class SocioControllerTest {
         when(socioService.findAll(isNull(), isNull(), isNull())).thenReturn(mockSocioDtoList);
 
         //simulamos cliente Http                                   llamamos a findAll de Controller
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/socios")
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/socios")
                 .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -100,7 +100,7 @@ public class SocioControllerTest {
 
         when(socioService.findAll( isNull(), isNull(),eq(filterDate))).thenReturn(mockSocioDtoList);
 
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/socios")
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/socios")
                         .queryParam("entryDate", "2000-05-06")
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isOk())
@@ -132,7 +132,7 @@ public class SocioControllerTest {
         when(socioService.findAll("Monoparental",null, null)).thenReturn(mockSocioDtoList);
 
 
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/socios")
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/socios")
                         .queryParam("familyModel", "Monoparental")
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isOk())
@@ -170,7 +170,7 @@ public class SocioControllerTest {
 
         when(socioService.findAll(any(), any(), any())).thenReturn(mockSocioDtoList);
 
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/socios")
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/socios")
                         .queryParam("active", "true")
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isOk())
@@ -200,7 +200,7 @@ public class SocioControllerTest {
 
         when(socioService.findById(selectedDto.getId())).thenReturn(selectedDto);
 
-        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.get("/socios/"+ selectedDto.getId())
+        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/socios/"+ selectedDto.getId())
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -219,7 +219,7 @@ public class SocioControllerTest {
 
         when(socioService.findById(selected.getId())).thenThrow(new SocioNotFoundException("Socio con ID" + selected.getId() +" no encontrado"));
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/socios/"+ selected.getId())
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/socios/"+ selected.getId())
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isNotFound());
 
@@ -235,7 +235,7 @@ public class SocioControllerTest {
         ObjectMapper om = new ObjectMapper().registerModule(new JavaTimeModule());
         String jsonRequest = om.writeValueAsString(socio);
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/socios")
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/socios")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(jsonRequest))
@@ -255,7 +255,7 @@ public class SocioControllerTest {
         ObjectMapper om = new ObjectMapper().registerModule(new JavaTimeModule());
         String socioJson = objectMapper.writeValueAsString(newsocio);
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/socios")
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/socios")
                         .contentType(MediaType.APPLICATION_JSON_VALUE)
                         .content(socioJson))
                 .andExpect(status().isBadRequest());
@@ -277,7 +277,7 @@ public class SocioControllerTest {
 
         String jsonRequest = thisObjectmapper.writeValueAsString(wantedSocio);
 
-       MvcResult result = mockMvc.perform(MockMvcRequestBuilders.put("/socios/" + originalSocio.getId())
+       MvcResult result = mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/socios/" + originalSocio.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonRequest))
                 .andExpect(status().isOk())
@@ -301,7 +301,7 @@ public class SocioControllerTest {
 
         String jsonRequest = thisObjectmapper.writeValueAsString(wantedSocio);
 
-        mockMvc.perform(MockMvcRequestBuilders.put("/socios/1")
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/socios/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonRequest))
                 .andExpect(status().isBadRequest());
@@ -314,7 +314,7 @@ public class SocioControllerTest {
 
         doNothing().when(socioService).delete(socio.getId());
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/socios/" + socio.getId())
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/socios/" + socio.getId())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }
@@ -327,7 +327,7 @@ public class SocioControllerTest {
 
         when(socioService.findById(socio.getId())).thenThrow(new SocioNotFoundException("Socio con ID" + socio.getId() +" no encontrado"));
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/socios/" + socio.getId())
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/socios/" + socio.getId())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }

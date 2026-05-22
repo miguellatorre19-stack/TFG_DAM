@@ -61,7 +61,7 @@ class ParticipanteControllerTest {
 
         when(participanteService.findAll(any(), any(), any())).thenReturn(List.of(dto1, dto2));
 
-        mockMvc.perform(get("/participantes").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/participantes").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].id").value(1))
@@ -79,7 +79,7 @@ class ParticipanteControllerTest {
 
         when(participanteService.findAll(birthDate, "Alberto", "hijo")).thenReturn(List.of(dto));
 
-        mockMvc.perform(get("/participantes")
+        mockMvc.perform(get("/api/v1/participantes")
                         .queryParam("birthDate", birthDate.toString())
                         .queryParam("name", "Alberto")
                         .queryParam("typeRel", "hijo")
@@ -97,7 +97,7 @@ class ParticipanteControllerTest {
         ParticipanteDto dto = buildParticipanteDto("77777777U", "Alberto", 1L);
         when(participanteService.findById(1L)).thenReturn(dto);
 
-        mockMvc.perform(get("/participantes/1").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/participantes/1").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.dni").value("77777777U"))
                 .andExpect(jsonPath("$.name").value("Alberto"))
@@ -108,7 +108,7 @@ class ParticipanteControllerTest {
     void getParticipanteByIdReturns404() throws Exception {
         when(participanteService.findById(1L)).thenThrow(new ParticipanteNotFoundException("Participante no encontrado"));
 
-        mockMvc.perform(get("/participantes/1").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/participantes/1").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
 
@@ -121,7 +121,7 @@ class ParticipanteControllerTest {
         when(participanteService.addDto(any(ParticipanteDto.class), eq(1L))).thenReturn(participanteSaved);
         when(modelMapper.map(participanteSaved, ParticipanteDto.class)).thenReturn(mappedResponse);
 
-        mockMvc.perform(post("/socios/1/participante")
+        mockMvc.perform(post("/api/v1/socios/1/participante")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
@@ -140,7 +140,7 @@ class ParticipanteControllerTest {
         when(participanteService.modifyDto(eq(1L), any(ParticipanteDto.class))).thenReturn(participanteUpdated);
         when(modelMapper.map(participanteUpdated, ParticipanteDto.class)).thenReturn(mappedResponse);
 
-        mockMvc.perform(put("/participantes/1")
+        mockMvc.perform(put("/api/v1/participantes/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
@@ -155,7 +155,7 @@ class ParticipanteControllerTest {
         when(participanteService.modifyDto(eq(1L), any(ParticipanteDto.class)))
                 .thenThrow(new ParticipanteNotFoundException("Participante no encontrado"));
 
-        mockMvc.perform(put("/participantes/1")
+        mockMvc.perform(put("/api/v1/participantes/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
@@ -166,7 +166,7 @@ class ParticipanteControllerTest {
     void deleteParticipanteReturns204() throws Exception {
         doNothing().when(participanteService).delete(1L);
 
-        mockMvc.perform(delete("/participantes/1").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(delete("/api/v1/participantes/1").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }
 
@@ -174,7 +174,7 @@ class ParticipanteControllerTest {
     void deleteParticipanteReturns404() throws Exception {
         doThrow(new ParticipanteNotFoundException("Participante no encontrado")).when(participanteService).delete(1L);
 
-        mockMvc.perform(delete("/participantes/1").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(delete("/api/v1/participantes/1").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
 
