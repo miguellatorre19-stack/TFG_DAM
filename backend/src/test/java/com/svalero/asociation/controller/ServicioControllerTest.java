@@ -55,7 +55,7 @@ class ServicioControllerTest {
 
         when(servicioService.findAllDto(isNull(), isNull(), isNull())).thenReturn(serviciosList);
 
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/servicios")
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/servicios")
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -83,7 +83,7 @@ class ServicioControllerTest {
 
         when(servicioService.findAllDto(eq("anual"), isNull(), isNull())).thenReturn(serviciosList);
 
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/servicios")
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/servicios")
                         .queryParam("periodicity", "anual")
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isOk())
@@ -109,7 +109,7 @@ class ServicioControllerTest {
 
         when(servicioService.findAllDto(isNull(), any(), isNull())).thenReturn(serviciosList);
 
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/servicios")
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/servicios")
                         .queryParam("capacity", "1")
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isOk())
@@ -135,7 +135,7 @@ class ServicioControllerTest {
 
         when(servicioService.findAllDto(isNull(), isNull(), any())).thenReturn(serviciosList);
 
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/servicios")
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/servicios")
                         .queryParam("duration", "40")
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isOk())
@@ -157,7 +157,7 @@ class ServicioControllerTest {
 
         when(servicioService.findDtoById(selected.getId())).thenReturn(selected);
 
-        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.get("/servicios/"+ selected.getId())
+        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/servicios/"+ selected.getId())
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isAccepted())
                 .andReturn();
@@ -173,7 +173,7 @@ class ServicioControllerTest {
 
         when(servicioService.findDtoById(7)).thenThrow(ServicioNotFoundException.class);
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/servicios/7")
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/servicios/7")
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isNotFound())
                 .andReturn();
@@ -191,7 +191,7 @@ class ServicioControllerTest {
 
         String jsonRequest = thisobjectmapper.writeValueAsString(newServicio);
 
-        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.post("/servicios")
+        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/servicios")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON_VALUE)
                         .content(jsonRequest))
@@ -214,7 +214,7 @@ class ServicioControllerTest {
 
         String jsonRequest = objectMapper.writeValueAsString(newServicio);
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/servicios")
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/servicios")
                         .contentType(MediaType.APPLICATION_JSON_VALUE)
                         .content(jsonRequest))
                 .andExpect(status().isBadRequest());
@@ -234,7 +234,7 @@ class ServicioControllerTest {
 
         String jsonRequest = thisobjectmapper.writeValueAsString(wantedServicio);
 
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.put("/servicios/" + originalServicio.getId())
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/servicios/" + originalServicio.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON_VALUE)
                         .content(jsonRequest))
@@ -260,7 +260,7 @@ class ServicioControllerTest {
 
         String jsonRequest = thisobjectmapper.writeValueAsString(wantedServicio);
 
-      mockMvc.perform(MockMvcRequestBuilders.put("/servicios/" + originalServicio.getId())
+      mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/servicios/" + originalServicio.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON_VALUE)
                         .content(jsonRequest))
@@ -274,7 +274,7 @@ class ServicioControllerTest {
 
         doNothing().when(servicioService).delete(selected.getId());
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/servicios/" + selected.getId())
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/servicios/" + selected.getId())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }
@@ -285,7 +285,7 @@ class ServicioControllerTest {
 
         doNothing().when(servicioService).delete(selected.getId());
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/servicios/" + selected.getId())
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/servicios/" + selected.getId())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }

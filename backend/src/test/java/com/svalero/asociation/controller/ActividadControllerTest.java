@@ -60,7 +60,7 @@ class ActividadControllerTest {
 
         when(actividadService.findAll(any(), any(), any())).thenReturn(List.of(dto1, dto2));
 
-        mockMvc.perform(get("/actividades").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/actividades").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].id").value(1))
@@ -76,7 +76,7 @@ class ActividadControllerTest {
 
         when(actividadService.findAll(dayActivity, true, 40f)).thenReturn(List.of(dto));
 
-        mockMvc.perform(get("/actividades")
+        mockMvc.perform(get("/api/v1/actividades")
                         .queryParam("dayActivity", dayActivity.toString())
                         .queryParam("canJoin", "true")
                         .queryParam("duration", "40")
@@ -94,7 +94,7 @@ class ActividadControllerTest {
         ActividadOutDto dto = buildActividadOutDto(1L, "Club de lectura");
         when(actividadService.findOutById(1L)).thenReturn(dto);
 
-        mockMvc.perform(get("/actividades/1").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/actividades/1").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.description").value("Club de lectura"));
@@ -104,7 +104,7 @@ class ActividadControllerTest {
     void testGetByIdFor404() throws Exception {
         when(actividadService.findOutById(1L)).thenThrow(new ActividadNotFoundException("Not found"));
 
-        mockMvc.perform(get("/actividades/1").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/actividades/1").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
 
@@ -115,7 +115,7 @@ class ActividadControllerTest {
 
         when(actividadService.add(any(ActividadDto.class))).thenReturn(outDto);
 
-        mockMvc.perform(post("/actividades")
+        mockMvc.perform(post("/api/v1/actividades")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(actividadDto)))
@@ -129,10 +129,20 @@ class ActividadControllerTest {
         Actividad wanted = buildActividadEntity(1L, "Club de lectura", "Individual");
         when(actividadService.modify(eq(1L), any(Actividad.class))).thenReturn(wanted);
 
-        mockMvc.perform(put("/actividades/1")
+        ActividadDto actividadDto = new ActividadDto();
+        actividadDto.setDescription("Club de lectura");
+        actividadDto.setDayActivity(LocalDate.now().plusDays(7));
+        actividadDto.setTypeActivity("Individual");
+        actividadDto.setDuration(1.5f);
+        actividadDto.setCanJoin(true);
+        actividadDto.setCapacity(10);
+        actividadDto.setLongitude(-0.8891);
+        actividadDto.setLatitude(41.6488);
+
+        mockMvc.perform(put("/api/v1/actividades/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(wanted)))
+                        .content(objectMapper.writeValueAsString(actividadDto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.typeActivity").value("Individual"));
@@ -140,14 +150,23 @@ class ActividadControllerTest {
 
     @Test
     void testEditFor404() throws Exception {
-        Actividad wanted = buildActividadEntity(1L, "Club de lectura", "Individual");
+        ActividadDto actividadDto = new ActividadDto();
+        actividadDto.setDescription("Club de lectura");
+        actividadDto.setDayActivity(LocalDate.now().plusDays(7));
+        actividadDto.setTypeActivity("Individual");
+        actividadDto.setDuration(1.5f);
+        actividadDto.setCanJoin(true);
+        actividadDto.setCapacity(10);
+        actividadDto.setLongitude(-0.8891);
+        actividadDto.setLatitude(41.6488);
+
         when(actividadService.modify(eq(1L), any(Actividad.class)))
                 .thenThrow(new ActividadNotFoundException("Not found"));
 
-        mockMvc.perform(put("/actividades/1")
+        mockMvc.perform(put("/api/v1/actividades/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(wanted)))
+                        .content(objectMapper.writeValueAsString(actividadDto)))
                 .andExpect(status().isNotFound());
     }
 
@@ -155,7 +174,7 @@ class ActividadControllerTest {
     void testDeleteFor204() throws Exception {
         doNothing().when(actividadService).delete(1L);
 
-        mockMvc.perform(delete("/actividades/1").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(delete("/api/v1/actividades/1").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }
 
@@ -163,7 +182,7 @@ class ActividadControllerTest {
     void testDeleteFor404() throws Exception {
         doThrow(new ActividadNotFoundException("Not found")).when(actividadService).delete(1L);
 
-        mockMvc.perform(delete("/actividades/1").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(delete("/api/v1/actividades/1").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
 

@@ -107,12 +107,28 @@ class ParticipanteServiceTest {
     @Test
     void testAddDto() {
         ParticipanteDto participanteDto = buildParticipanteDto("77777777U", "Alberto", 1L);
+
         Socio socio = new Socio();
         socio.setId(1L);
+
         SocioDto socioDto = new SocioDto();
         socioDto.setId(1L);
 
-        Participante participante = buildParticipante(1,"77777777U", "Alberto", 1L);
+        doAnswer(invocation -> {
+            ParticipanteDto source = invocation.getArgument(0);
+            Participante target = invocation.getArgument(1);
+
+            target.setDni(source.getDni());
+            target.setName(source.getName());
+            target.setSurname(source.getSurname());
+            target.setEmail(source.getEmail());
+            target.setPhoneNumber(source.getPhoneNumber());
+            target.setBirthDate(source.getBirthDate());
+            target.setNeeds(source.getNeeds());
+            target.setTypeRel(source.getTypeRel());
+
+            return null;
+        }).when(modelMapper).map(eq(participanteDto), any(Participante.class));
 
         when(participanteRepository.existsBydni("77777777U")).thenReturn(false);
         when(socioService.findById(1L)).thenReturn(socioDto);
