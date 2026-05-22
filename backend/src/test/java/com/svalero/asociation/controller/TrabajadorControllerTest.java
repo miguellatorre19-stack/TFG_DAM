@@ -54,7 +54,7 @@ class TrabajadorControllerTest {
         when(trabajadorService.findAllDto(null, null, null)).thenReturn(mockTrabajadorList);
 
         //simulamos cliente Http                                   llamamos a findAll de Controller
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/trabajadores")
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/trabajadores")
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -85,7 +85,7 @@ class TrabajadorControllerTest {
 
         when(trabajadorService.findAllDto(filterDate, null,null)).thenReturn(mockTrabajadorList);
 
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/trabajadores")
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/trabajadores")
                         .queryParam("entryDate", LocalDate.now().toString())
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isOk())
@@ -112,7 +112,7 @@ class TrabajadorControllerTest {
 
         when(trabajadorService.findAllDto(null, "Diana", null)).thenReturn(mockTrabajadorList);
 
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/trabajadores")
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/trabajadores")
                         .queryParam("name", "Diana")
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isOk())
@@ -143,7 +143,7 @@ class TrabajadorControllerTest {
 
         when(trabajadorService.findAllDto(null, null, "Tiempo Parcial")).thenReturn(mockTrabajadorList);
 
-        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/trabajadores")
+        MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/trabajadores")
                         .queryParam("contractType", "Tiempo Parcial")
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isOk())
@@ -171,7 +171,7 @@ class TrabajadorControllerTest {
         when(trabajadorService.findAllDto(any(), any(), any()))
                 .thenThrow(new TrabajadorNotFoundException("No trabajadores"));
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/trabajadores"))
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/trabajadores"))
                 .andExpect(status().isNotFound());
     }
 
@@ -181,7 +181,7 @@ class TrabajadorControllerTest {
 
         when(trabajadorService.findDtoById(1)).thenReturn(selected);
 
-        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.get("/trabajadores/1")
+        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/trabajadores/1")
                         .accept(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().isAccepted())
                 .andReturn();
@@ -204,7 +204,7 @@ class TrabajadorControllerTest {
 
         String jsonRequest = thisObjectmapper.writeValueAsString(newTrabajador);
 
-        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.post("/servicios/1/trabajadores")
+        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/servicios/1/trabajadores")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(jsonRequest))
@@ -229,7 +229,7 @@ class TrabajadorControllerTest {
 
         String jsonRequest = objectMapper.writeValueAsString(newTrabajador);
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/servicios/1/trabajadores")
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/servicios/1/trabajadores")
                         .contentType(MediaType.APPLICATION_JSON_VALUE)
                         .content(jsonRequest))
                 .andExpect(status().isBadRequest());
@@ -247,7 +247,7 @@ class TrabajadorControllerTest {
 
         String jsonRequest = thisObjectmapper.writeValueAsString(wantedTrabajador);
 
-        mockMvc.perform(MockMvcRequestBuilders.put("/trabajadores/1")
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/trabajadores/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonRequest))
                 .andExpect(status().isOk());
@@ -269,7 +269,7 @@ class TrabajadorControllerTest {
 
         String jsonRequest = thisObjectmapper.writeValueAsString(wantedTrabajador);
 
-        mockMvc.perform(MockMvcRequestBuilders.put("/trabajadores/1")
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/trabajadores/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonRequest))
                 .andExpect(status().isNotFound());
@@ -282,7 +282,7 @@ class TrabajadorControllerTest {
 
         doNothing().when(trabajadorService).delete(selected.getId());
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/trabajadores/" + selected.getId())
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/trabajadores/" + selected.getId())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }
@@ -293,7 +293,7 @@ class TrabajadorControllerTest {
 
         doNothing().when(trabajadorService).delete(selected.getId());
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/trabajadores/" + selected.getId())
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/trabajadores/" + selected.getId())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }
