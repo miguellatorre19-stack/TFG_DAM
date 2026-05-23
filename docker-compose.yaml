@@ -1,18 +1,22 @@
+version: "3.9"
+
 services:
   db:
     image: mariadb:11.8
     restart: unless-stopped
     environment:
-      MARIADB_DATABASE: ${PROD_DB_NAME:?missing}
-      MARIADB_USER: ${PROD_DB_USER:?missing}
-      MARIADB_PASSWORD: ${PROD_DB_PASSWORD:?missing}
-      MARIADB_ROOT_PASSWORD: ${PROD_DB_ROOT_PASSWORD:?missing}
+      MARIADB_DATABASE: ${DEV_DB_NAME:-association}
+      MARIADB_USER: ${DEV_DB_USER:-association_user}
+      MARIADB_PASSWORD: ${DEV_DB_PASSWORD:-association_password}
+      MARIADB_ROOT_PASSWORD: ${DEV_DB_ROOT_PASSWORD:-root_password}
+    ports:
+      - "${DEV_DB_PORT:-3306}:3306"
     healthcheck:
-      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
-      start_period: 10s
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u$${MARIADB_USER} -p$${MARIADB_PASSWORD} --silent"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 40s
     volumes:
       - db_data:/var/lib/mysql
     networks:
@@ -20,7 +24,7 @@ services:
 
   asociation-api:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     image: asociation-api:latest
     restart: unless-stopped
@@ -30,12 +34,12 @@ services:
       db:
         condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE: prod
-      PROD_DB_HOST: db
-      PROD_DB_PORT: 3306
-      PROD_DB_NAME: ${PROD_DB_NAME:?missing}
-      PROD_DB_USER: ${PROD_DB_USER:?missing}
-      PROD_DB_PASSWORD: ${PROD_DB_PASSWORD:?missing}
+      SPRING_PROFILES_ACTIVE: dev
+      DEV_DB_HOST: db
+      DEV_DB_PORT: 3306
+      DEV_DB_NAME: ${DEV_DB_NAME:-association}
+      DEV_DB_USER: ${DEV_DB_USER:-association_user}
+      DEV_DB_PASSWORD: ${DEV_DB_PASSWORD:-association_password}
     networks:
       - app_net
 
