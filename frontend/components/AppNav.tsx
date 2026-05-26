@@ -35,6 +35,34 @@ export default function AppNav() {
             Socios
           </Link>
 
+	  <Link
+ 	    href="/participantes"
+            className="font-medium text-slate-700 hover:text-indigo-600"
+          >
+            Participantes
+          </Link>
+
+          <Link
+            href="/actividades"
+            className="font-medium text-slate-700 hover:text-indigo-600"
+          >
+            Actividades
+          </Link>
+
+          <Link
+            href="/servicios"
+            className="font-medium text-slate-700 hover:text-indigo-600"
+          >
+            Servicios
+          </Link>
+
+          <Link
+            href="/trabajadores"
+            className="font-medium text-slate-700 hover:text-indigo-600"
+          >
+            Trabajadores
+          </Link>
+
           <button
             onClick={handleLogout}
             className="rounded-lg border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
