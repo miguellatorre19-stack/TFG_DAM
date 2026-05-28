@@ -28,9 +28,25 @@ public class ActividadService {
     public List<ActividadOutDto> findAll(LocalDate dayActivity, Boolean canJoin, Float duration) {
         List<Actividad> actividades = actividadRepository.findByFilters(dayActivity, canJoin, duration);
         logger.info("Searching Actividad with filters: {} {} {}", dayActivity, canJoin, duration);
-        List<ActividadOutDto> actividadOutDtoList = modelMapper.map(actividades, new TypeToken<List<ActividadOutDto>>(){}.getType());
-        return actividadOutDtoList;
+
+        return actividades.stream()
+                .map(this::toOutDto)
+                .toList();
     }
+
+    private ActividadOutDto toOutDto(Actividad actividad) {
+        ActividadOutDto dto = new ActividadOutDto();
+
+        dto.setId(actividad.getId());
+        dto.setDescription(actividad.getDescription());
+        dto.setDayActivity(actividad.getDayActivity());
+        dto.setDuration(actividad.getDuration());
+        dto.setCanJoin(actividad.getCanJoin());
+
+        return dto;
+    }
+
+
 
     public List<ActividadOutDto> findAllv2(LocalDate dayActivity, Boolean canJoin, Integer capacity) {
         List<Actividad> actividades = actividadRepository.findByFiltersv2(dayActivity, canJoin, capacity);

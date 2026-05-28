@@ -51,19 +51,19 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
 
-                        .requestMatchers("/api/v1/servicios/**")
+                        .requestMatchers("/api/v1/servicios", "/api/v1/servicios/**")
                         .hasAnyRole("ADMIN", "TRABAJADOR")
 
-                        .requestMatchers("/api/v1/trabajadores/**")
+                        .requestMatchers("/api/v1/trabajadores", "/api/v1/trabajadores/**")
                         .hasRole("ADMIN")
 
-                        .requestMatchers("/api/v1/socios/**")
+                        .requestMatchers("/api/v1/socios", "/api/v1/socios/**")
                         .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO")
 
-                        .requestMatchers("/api/v1/participantes/**")
+                        .requestMatchers("/api/v1/participantes", "/api/v1/participantes/**")
                         .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO")
 
-                        .requestMatchers("/api/v1/actividades/**")
+                        .requestMatchers("/api/v1/actividades", "/api/v1/actividades/**")
                         .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO", "VOLUNTARIO")
 
                         .anyRequest().authenticated()
