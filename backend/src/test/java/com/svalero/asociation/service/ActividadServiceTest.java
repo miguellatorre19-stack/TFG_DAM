@@ -17,16 +17,13 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ActividadServiceTest {
@@ -42,27 +39,57 @@ class ActividadServiceTest {
 
     @Test
     void testFindAll() {
-        LocalDate day = LocalDate.of(2026, 3, 20);
+        LocalDate dayActivity = LocalDate.of(2026, 5, 20);
+        Boolean canJoin = true;
+        Float duration = 40.0f;
 
-        Actividad a1 = buildActividad(1L, "Club de lectura");
-        Actividad a2 = buildActividad(2L, "Partido de baloncesto");
-        List<Actividad> entidades = List.of(a1, a2);
+        Actividad actividad1 = new Actividad();
+        actividad1.setId(1L);
+        actividad1.setDescription("Club de lectura");
+        actividad1.setTypeActivity("Grupal");
+        actividad1.setDayActivity(dayActivity);
+        actividad1.setDuration(duration);
+        actividad1.setCanJoin(canJoin);
+        actividad1.setCapacity(10);
 
-        ActividadOutDto dto1 = buildActividadOutDto(1L, "Club de lectura");
-        ActividadOutDto dto2 = buildActividadOutDto(2L, "Partido de baloncesto");
-        List<ActividadOutDto> expected = List.of(dto1, dto2);
+        Actividad actividad2 = new Actividad();
+        actividad2.setId(2L);
+        actividad2.setDescription("Partido de baloncesto");
+        actividad2.setTypeActivity("Grupal");
+        actividad2.setDayActivity(dayActivity);
+        actividad2.setDuration(duration);
+        actividad2.setCanJoin(canJoin);
+        actividad2.setCapacity(10);
 
-        when(actividadRepository.findByFilters(day, true, 40f)).thenReturn(entidades);
-        doReturn(expected).when(modelMapper).map(eq(entidades), any(Type.class));
+        actividad1.setDayActivity(dayActivity);
+        actividad1.setDuration(duration);
+        actividad1.setCanJoin(canJoin);
+        actividad1.setCapacity(10);
 
-        List<ActividadOutDto> result = actividadService.findAll(day, true, 40f);
+        actividad2.setDayActivity(dayActivity);
+        actividad2.setDuration(duration);
+        actividad2.setCanJoin(canJoin);
+        actividad2.setCapacity(10);
+
+        List<Actividad> actividades = List.of(actividad1, actividad2);
+
+        when(actividadRepository.findByFilters(dayActivity, canJoin, duration))
+                .thenReturn(actividades);
+
+        List<ActividadOutDto> result = actividadService.findAll(dayActivity, canJoin, duration);
 
         assertEquals(2, result.size());
+        assertEquals(1L, result.get(0).getId());
         assertEquals("Club de lectura", result.get(0).getDescription());
+        assertEquals(dayActivity, result.get(0).getDayActivity());
+        assertEquals(duration, result.get(0).getDuration());
+        assertEquals(canJoin, result.get(0).getCanJoin());
+
+        assertEquals(2L, result.get(1).getId());
         assertEquals("Partido de baloncesto", result.get(1).getDescription());
 
-        verify(actividadRepository).findByFilters(day, true, 40f);
-        verify(modelMapper).map(eq(entidades), any(Type.class));
+        verify(actividadRepository).findByFilters(dayActivity, canJoin, duration);
+        verifyNoInteractions(modelMapper);
     }
 
     @Test
