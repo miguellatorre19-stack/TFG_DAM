@@ -33,8 +33,23 @@ public class ServicioService {
 
     public List<ServicioOutDto> findAllDto(String periodicity, Integer capacity, Float duration){
         List<Servicio> servicios = findAll(periodicity, capacity, duration);
-        return modelMapper.map(servicios, new TypeToken<List<ServicioOutDto>>() {
-        }.getType());
+
+        return servicios.stream()
+                .map(this::toOutDto)
+                .toList();
+    }
+
+    private ServicioOutDto toOutDto(Servicio servicio) {
+        ServicioOutDto dto = new ServicioOutDto();
+
+        dto.setId(servicio.getId());
+        dto.setDescription(servicio.getDescription());
+        dto.setPeriodicity(servicio.getPeriodicity());
+        dto.setRequisites(servicio.getRequisites());
+        dto.setDuration(servicio.getDuration());
+        dto.setCapacity(servicio.getCapacity());
+
+        return dto;
     }
 
     public Servicio findById(long id) {
