@@ -55,11 +55,24 @@ public class SocioService {
         return socio;
     }
 
-    public Socio modify(long id, Socio socio) {
-        Socio oldsocio = socioRepository.findById(id).orElseThrow(() -> new SocioNotFoundException("Socio con ID " + id + " no encontrado"));
-        logger.info("Updating socio with ID: {}", id);
-        modelMapper.map(socio, oldsocio);
-        return socioRepository.save(oldsocio);
+    public Socio modify(long id, Socio socioData) throws SocioNotFoundException {
+        logger.info("Updating socio with ID: " + id);
+
+        Socio socio = socioRepository.findById(id)
+                .orElseThrow(() -> new SocioNotFoundException("Socio not found"));
+
+        socio.setName(socioData.getName());
+        socio.setSurname(socioData.getSurname());
+        socio.setDni(socioData.getDni());
+        socio.setEmail(socioData.getEmail());
+        socio.setPhoneNumber(socioData.getPhoneNumber());
+        socio.setAddress(socioData.getAddress());
+        socio.setEntryDate(socioData.getEntryDate());
+        socio.setOutDate(socioData.getOutDate());
+        socio.setFamilyModel(socioData.getFamilyModel());
+        socio.setActive(socioData.getActive());
+
+        return socioRepository.save(socio);
     }
 
     public void delete(long id) {
