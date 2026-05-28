@@ -37,7 +37,7 @@ class ActividadServiceTest {
     @Mock
     private ModelMapper modelMapper;
 
-    @Test
+    @Testgit push -u origin feat/dev-demo-data
     void testFindAll() {
         LocalDate dayActivity = LocalDate.of(2026, 5, 20);
         Boolean canJoin = true;
