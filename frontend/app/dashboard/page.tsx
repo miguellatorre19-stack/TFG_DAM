@@ -64,7 +64,7 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-slate-100">
       <AppNav />
 
-      <section className="mx-auto max-w-6xl px-6 py-8">
+      <section className="mx-auto max-w-6xl px-6 py-8">git
         <div className="mb-8 rounded-2xl bg-white p-6 shadow">
           <p className="text-sm font-medium text-indigo-600">Panel de administración</p>
 
