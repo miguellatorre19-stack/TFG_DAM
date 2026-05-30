@@ -15,7 +15,8 @@ const modules = [
   },
   {
     title: "Participantes",
-    description: "Personas participantes vinculadas a socios, actividades o servicios.",
+    description:
+      "Personas participantes vinculadas a socios, actividades o servicios.",
     href: "/participantes",
   },
   {
@@ -25,7 +26,8 @@ const modules = [
   },
   {
     title: "Servicios",
-    description: "Servicios especializados asignados por trabajadores cualificados.",
+    description:
+      "Servicios especializados asignados por trabajadores cualificados.",
     href: "/servicios",
   },
   {
@@ -38,24 +40,28 @@ const modules = [
 export default function DashboardPage() {
   const router = useRouter();
 
-  const [user] = useState<LoginResponse | null>(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
+const [user, setUser] = useState<LoginResponse | null | undefined>(undefined);
 
-    return getUser();
-  });
+useEffect(() => {
+  const timeoutId = window.setTimeout(() => {
+    const currentUser = getUser();
 
-  useEffect(() => {
-    if (!user) {
+    if (!currentUser) {
       router.push("/login");
+      setUser(null);
+      return;
     }
-  }, [router, user]);
 
-  if (!user) {
+    setUser(currentUser);
+  }, 0);
+
+  return () => window.clearTimeout(timeoutId);
+}, [router]);
+
+if (user === undefined || user === null) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-100">
-        <p className="text-sm text-slate-600">Redirigiendo al login...</p>
+        <p className="text-sm text-slate-600">Cargando panel...</p>
       </main>
     );
   }
@@ -64,9 +70,11 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-slate-100">
       <AppNav />
 
-      <section className="mx-auto max-w-6xl px-6 py-8">git
+      <section className="mx-auto max-w-6xl px-6 py-8">
         <div className="mb-8 rounded-2xl bg-white p-6 shadow">
-          <p className="text-sm font-medium text-indigo-600">Panel de administración</p>
+          <p className="text-sm font-medium text-indigo-600">
+            Panel de administración
+          </p>
 
           <h2 className="mt-2 text-2xl font-bold text-slate-900">
             Bienvenido, {user.name}
