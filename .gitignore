@@ -94,3 +94,7 @@ Thumbs.db
 
 # Project local docs
 DEV-guide
+
+#Scripts
+/scripts
+*.ps1

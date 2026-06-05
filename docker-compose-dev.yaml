@@ -36,6 +36,7 @@ services:
       DEV_DB_HOST: db
       DEV_DB_PORT: 3306
       DEV_DB_NAME: ${DEV_DB_NAME:?missing}
-
+      DEV_DB_USER: ${DEV_DB_USER:?missing}
+      DEV_DB_PASSWORD: ${DEV_DB_PASSWORD:?missing}
 volumes:
   db_data_dev:
