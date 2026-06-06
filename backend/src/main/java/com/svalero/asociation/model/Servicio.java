@@ -36,12 +36,19 @@ public class Servicio {
     @NotNull(message = "necesita una capacidad")
     private Integer capacity;
 
-    @ManyToMany(mappedBy = "servicios")
-    private List<Participante> participantesInscritos;
-
     @OneToMany(mappedBy = "servicios")
     @JsonBackReference(value = "servicio_trabajadores")
     private List<Trabajador> trabajadoresAsignados;
 
+    public Servicio(long id, String description, String periodicity, String requisites, Float duration, Integer capacity,
+            List<Participante> ignoredParticipantesInscritos, List<Trabajador> trabajadoresAsignados) {
+        this.id = id;
+        this.description = description;
+        this.periodicity = periodicity;
+        this.requisites = requisites;
+        this.duration = duration;
+        this.capacity = capacity;
+        this.trabajadoresAsignados = trabajadoresAsignados;
+    }
 
 }

@@ -2,6 +2,7 @@ package com.svalero.asociation.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.svalero.asociation.dto.ParticipanteDto;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -54,4 +55,26 @@ public class Socio {
         @OneToMany(mappedBy = "socio")
         @JsonBackReference
         private List<Participante> participanteList;
+
+        @OneToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "usuario_id", unique = true)
+        @JsonIgnore
+        private Usuario usuario;
+
+        public Socio(long id, String dni, String name, String surname, String email, String address,
+                     String phoneNumber, String familyModel, Boolean active, LocalDate entryDate,
+                     LocalDate outDate, List<Participante> participanteList) {
+                this.id = id;
+                this.dni = dni;
+                this.name = name;
+                this.surname = surname;
+                this.email = email;
+                this.address = address;
+                this.phoneNumber = phoneNumber;
+                this.familyModel = familyModel;
+                this.active = active;
+                this.entryDate = entryDate;
+                this.outDate = outDate;
+                this.participanteList = participanteList;
+        }
 }

@@ -1,12 +1,15 @@
 package com.svalero.asociation.service;
 
 
+import com.svalero.asociation.dto.AccessCredentialsDto;
+import com.svalero.asociation.dto.ParticipanteAccessResponseDto;
 import com.svalero.asociation.dto.ParticipanteDto;
 import com.svalero.asociation.dto.ParticipanteOutDto;
 import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.exception.BusinessRuleException;
 import com.svalero.asociation.exception.ParticipanteNotFoundException;
 import com.svalero.asociation.model.Participante;
+import com.svalero.asociation.model.Usuario;
 import com.svalero.asociation.repository.ParticipanteRepository;
 import com.svalero.asociation.repository.SocioRepository;
 import org.modelmapper.ModelMapper;
@@ -30,6 +33,8 @@ public class ParticipanteService {
     private ModelMapper modelMapper;
     @Autowired
     private SocioService socioService;
+    @Autowired
+    private AccessUserService accessUserService;
 
     private final Logger logger = LoggerFactory.getLogger(ParticipanteService.class);
 
@@ -58,6 +63,38 @@ public class ParticipanteService {
         participante.setSocio(socioRepository.findById(socioDto.getId()).get());
         return participanteRepository.save(participante);
 
+    }
+
+    public ParticipanteAccessResponseDto addDtoWithAccess(ParticipanteDto participanteDto, long id) {
+        Participante participante = new Participante();
+        modelMapper.map(participanteDto, participante);
+
+        if(participanteRepository.existsBydni(participante.getDni())){
+            throw new BusinessRuleException("Un participante con DNI "+participante.getDni()+" ya existe");
+        }
+
+        SocioDto socioDto = socioService.findById(id);
+        participante.setSocio(socioRepository.findById(socioDto.getId()).get());
+
+        AccessCredentialsDto credentials = accessUserService.createAccessUser(
+                participante.getName() + " " + participante.getSurname(),
+                participante.getEmail(),
+                "PARTICIPANTE"
+        );
+
+        Usuario savedUsuario = credentials.getUsuario();
+        participante.setUsuario(savedUsuario);
+        Participante savedParticipante = participanteRepository.save(participante);
+
+        ParticipanteDto responseDto = modelMapper.map(savedParticipante, ParticipanteDto.class);
+        responseDto.setSocioID(id);
+
+        return new ParticipanteAccessResponseDto(
+                responseDto,
+                savedUsuario.getId(),
+                savedUsuario.getEmail(),
+                credentials.getInitialPassword()
+        );
     }
 
     public Participante modifyDto(long id, ParticipanteDto participanteDto){
