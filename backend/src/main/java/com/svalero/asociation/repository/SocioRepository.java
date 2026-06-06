@@ -28,13 +28,6 @@ public interface SocioRepository extends CrudRepository<Socio, Long> {
     List<Socio> findByFilters(@Param("familyModel") String familyModel,
                               @Param("active") Boolean active,
                               @Param("entryDate") LocalDate entryDate);
-
-    @Query("SELECT s FROM socio s WHERE " +
-            "(:familyModel IS NULL OR s.familyModel = :familyModel) AND " +
-             "(:entryDate IS NULL OR s.entryDate >= :entryDate)")
-    @EntityGraph(attributePaths = "participanteList")
-    List<Socio> findByFiltersV2(@Param("familyModel") String familyModel,
-                              @Param("entryDate") LocalDate entryDate);
 }
 
 

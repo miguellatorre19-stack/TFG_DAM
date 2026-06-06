@@ -3,6 +3,7 @@ package com.svalero.asociation.security;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -20,6 +21,9 @@ import java.util.List;
 
 @Configuration
 public class SecurityConfig {
+
+    @Value("${app.cors.allowed-origin:http://localhost:3000}")
+    private String allowedOrigin;
 
     @Bean
     @Profile("test")
@@ -58,13 +62,13 @@ public class SecurityConfig {
                         .hasRole("ADMIN")
 
                         .requestMatchers("/api/v1/socios", "/api/v1/socios/**")
-                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO", "PARTICIPANTE")
 
                         .requestMatchers("/api/v1/participantes", "/api/v1/participantes/**")
-                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO", "PARTICIPANTE")
 
                         .requestMatchers("/api/v1/actividades", "/api/v1/actividades/**")
-                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO", "VOLUNTARIO")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO", "PARTICIPANTE", "VOLUNTARIO")
 
                         .anyRequest().authenticated()
                 )
@@ -96,7 +100,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:3000"
+                allowedOrigin
         ));
 
         configuration.setAllowedMethods(List.of(
