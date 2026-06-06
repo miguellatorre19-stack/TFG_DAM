@@ -1,5 +1,7 @@
 package com.svalero.asociation.controller;
 
+import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.ParticipanteAccessResponseDto;
 import com.svalero.asociation.dto.ParticipanteDto;
 import com.svalero.asociation.dto.ParticipanteOutDto;
 import com.svalero.asociation.dto.SocioDto;
@@ -59,12 +61,10 @@ public class ParticipanteController {
     }
 
     @PostMapping("/v1/socios/{id}/participante")
-    public ResponseEntity<ParticipanteDto> addParticipante(@Valid@RequestBody ParticipanteDto participanteDto, @PathVariable long id) throws SocioNotFoundException, ParticipanteNotFoundException, MethodArgumentNotValidException {
+    public ResponseEntity<ParticipanteAccessResponseDto> addParticipante(@Valid@RequestBody ParticipanteDto participanteDto, @PathVariable long id) throws SocioNotFoundException, ParticipanteNotFoundException, MethodArgumentNotValidException {
 
-        Participante newparticipante = participanteService.addDto(participanteDto, id);
-        ParticipanteDto participanteDtoFinal = modelMapper.map(newparticipante, ParticipanteDto.class);
-        participanteDtoFinal.setSocioID(participanteDto.getSocioID());
-        return new ResponseEntity<>(participanteDtoFinal, HttpStatus.CREATED);
+        ParticipanteAccessResponseDto newparticipante = participanteService.addDtoWithAccess(participanteDto, id);
+        return new ResponseEntity<>(newparticipante, HttpStatus.CREATED);
     }
 
     @PutMapping("/v1/participantes/{id}")
@@ -75,6 +75,13 @@ public class ParticipanteController {
         participanteDtoUpdated.setSocioID(participanteDto.getSocioID());
         logger.info("PUT/participantes/{id}");
         return ResponseEntity.ok(participanteDtoUpdated);
+    }
+
+    @PostMapping("/v1/participantes/{id}/access-code")
+    public ResponseEntity<AccessCodeResponseDto> regenerateParticipanteAccessCode(@PathVariable long id) {
+        logger.info("POST/participantes/{id}/access-code");
+        AccessCodeResponseDto accessCode = participanteService.regenerateAccessCode(id);
+        return ResponseEntity.ok(accessCode);
     }
 
     @DeleteMapping("/v1/participantes/{id}")

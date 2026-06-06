@@ -9,6 +9,7 @@ import com.svalero.asociation.dto.ServicioOutDto;
 import com.svalero.asociation.exception.ServicioNotFoundException;
 import static org.mockito.ArgumentMatchers.*;
 
+import com.svalero.asociation.service.InscripcionServicioService;
 import com.svalero.asociation.service.ServicioService;
 import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
@@ -41,6 +42,9 @@ class ServicioControllerTest {
 
     @MockitoBean
     public ServicioService servicioService;
+
+    @MockitoBean
+    public InscripcionServicioService inscripcionServicioService;
 
     @Autowired
     private ObjectMapper objectMapper;
