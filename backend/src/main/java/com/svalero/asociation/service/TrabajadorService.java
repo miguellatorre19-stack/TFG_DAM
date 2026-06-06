@@ -1,11 +1,15 @@
 package com.svalero.asociation.service;
 
+import com.svalero.asociation.dto.AccessCredentialsDto;
+import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.TrabajadorAccessResponseDto;
 import com.svalero.asociation.dto.TrabajadorDto;
 import com.svalero.asociation.dto.TrabajadorOutDto;
 import com.svalero.asociation.exception.BusinessRuleException;
 import com.svalero.asociation.exception.TrabajadorNotFoundException;
 import com.svalero.asociation.model.Servicio;
 import com.svalero.asociation.model.Trabajador;
+import com.svalero.asociation.model.Usuario;
 import com.svalero.asociation.repository.TrabajadorRepository;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
@@ -13,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -26,6 +31,8 @@ public class TrabajadorService {
     private ModelMapper modelMapper;
     @Autowired
     private ServicioService servicioService;
+    @Autowired
+    private AccessUserService accessUserService;
 
     private final Logger logger = LoggerFactory.getLogger(TrabajadorService.class);
 
@@ -73,6 +80,37 @@ public class TrabajadorService {
         return modelMapper.map(savedTrabajador, TrabajadorOutDto.class);
     }
 
+    public TrabajadorAccessResponseDto addDtoWithAccess(TrabajadorDto trabajadorDto, long id) {
+        Trabajador trabajador = modelMapper.map(trabajadorDto, Trabajador.class);
+
+        if(trabajadorRepository.existsBydni(trabajador.getDni())){
+            logger.warn("DNI {} already exists", trabajador.getDni());
+            throw new BusinessRuleException("Un trabajador con DNI " + trabajador.getDni() + " ya existe");
+        }
+
+        Servicio servicio = servicioService.findById(id);
+        trabajador.setServicios(servicio);
+        trabajador.setEntryDate(LocalDate.now());
+
+        AccessCredentialsDto credentials = accessUserService.createAccessUser(
+                trabajador.getName() + " " + trabajador.getSurname(),
+                trabajador.getEmail(),
+                "TRABAJADOR"
+        );
+
+        Usuario savedUsuario = credentials.getUsuario();
+        trabajador.setUsuario(savedUsuario);
+        Trabajador savedTrabajador = trabajadorRepository.save(trabajador);
+
+        TrabajadorOutDto trabajadorOutDto = modelMapper.map(savedTrabajador, TrabajadorOutDto.class);
+        return new TrabajadorAccessResponseDto(
+                trabajadorOutDto,
+                savedUsuario.getId(),
+                savedUsuario.getEmail(),
+                credentials.getInitialPassword()
+        );
+    }
+
     public Trabajador modify(long id, Trabajador trabajador) {
         Trabajador oldtrabajador = trabajadorRepository.findById(id).orElseThrow(()-> new TrabajadorNotFoundException("Trabajador con la ID:"+ id+ "no encontrado"));
         LocalDate previousEntryDate = oldtrabajador.getEntryDate();
@@ -106,6 +144,31 @@ public class TrabajadorService {
 
         Trabajador updatedTrabajador = modify(id, trabajador);
         return modelMapper.map(updatedTrabajador, TrabajadorOutDto.class);
+    }
+
+    @Transactional
+    public AccessCodeResponseDto regenerateAccessCode(long id) {
+        Trabajador trabajador = trabajadorRepository.findById(id)
+                .orElseThrow(() -> new TrabajadorNotFoundException("Trabajador con la ID:"+ id+ "no encontrado"));
+
+        AccessCredentialsDto credentials;
+        if (trabajador.getUsuario() == null) {
+            credentials = accessUserService.createAccessUser(
+                    trabajador.getName() + " " + trabajador.getSurname(),
+                    trabajador.getEmail(),
+                    "TRABAJADOR"
+            );
+            trabajador.setUsuario(credentials.getUsuario());
+            trabajadorRepository.save(trabajador);
+        } else {
+            credentials = accessUserService.regenerateAccessCode(trabajador.getUsuario());
+        }
+
+        return new AccessCodeResponseDto(
+                credentials.getUsuario().getId(),
+                credentials.getUsuario().getEmail(),
+                credentials.getInitialPassword()
+        );
     }
 
     public void delete(long id) {

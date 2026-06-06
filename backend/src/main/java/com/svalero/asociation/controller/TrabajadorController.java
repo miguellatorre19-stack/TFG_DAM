@@ -1,5 +1,7 @@
 package com.svalero.asociation.controller;
 
+import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.TrabajadorAccessResponseDto;
 import com.svalero.asociation.dto.TrabajadorDto;
 import com.svalero.asociation.dto.TrabajadorOutDto;
 import com.svalero.asociation.service.TrabajadorService;
@@ -47,8 +49,8 @@ public class TrabajadorController {
     }
 
     @PostMapping("/v1/servicios/{id}/trabajadores")
-    public ResponseEntity<TrabajadorOutDto> addTrabajadors(@Valid@RequestBody TrabajadorDto trabajadorDto, @PathVariable long id) throws MethodArgumentNotValidException{
-        TrabajadorOutDto newtrabajador = trabajadorService.addDto(trabajadorDto, id);
+    public ResponseEntity<TrabajadorAccessResponseDto> addTrabajadors(@Valid@RequestBody TrabajadorDto trabajadorDto, @PathVariable long id) throws MethodArgumentNotValidException{
+        TrabajadorAccessResponseDto newtrabajador = trabajadorService.addDtoWithAccess(trabajadorDto, id);
         logger.info("POST/trabajadores");
         return new ResponseEntity<>(newtrabajador, HttpStatus.CREATED);
     }
@@ -58,6 +60,13 @@ public class TrabajadorController {
         TrabajadorOutDto updatedtrabajador = trabajadorService.modifyDto(id, trabajadorDto);
         logger.info("PUT/trabajadores/{id}");
         return ResponseEntity.ok(updatedtrabajador);
+    }
+
+    @PostMapping("/v1/trabajadores/{id}/access-code")
+    public ResponseEntity<AccessCodeResponseDto> regenerateTrabajadorAccessCode(@PathVariable long id) {
+        logger.info("POST/trabajadores/{id}/access-code");
+        AccessCodeResponseDto accessCode = trabajadorService.regenerateAccessCode(id);
+        return ResponseEntity.ok(accessCode);
     }
 
     @DeleteMapping("/v1/trabajadores/{id}")

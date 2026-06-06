@@ -1,8 +1,15 @@
 package com.svalero.asociation.service;
 
+import com.svalero.asociation.dto.AccessCredentialsDto;
+import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.SocioAccessResponseDto;
 import com.svalero.asociation.dto.SocioDto;
+import com.svalero.asociation.model.Rol;
 import com.svalero.asociation.model.Socio;
+import com.svalero.asociation.model.Usuario;
+import com.svalero.asociation.repository.RolRepository;
 import com.svalero.asociation.repository.SocioRepository;
+import com.svalero.asociation.repository.UsuarioRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -10,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import static org.junit.jupiter.api.Assertions.*;
 
 
@@ -33,6 +41,18 @@ public class SocioServiceTest {
 
     @Mock
     private ModelMapper mapper;
+
+    @Mock
+    private UsuarioRepository usuarioRepository;
+
+    @Mock
+    private RolRepository rolRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private AccessUserService accessUserService;
 
     @Test
     public void testFindAll() {
@@ -160,6 +180,37 @@ public class SocioServiceTest {
     }
 
     @Test
+    public void testAddWithAccessCreatesSocioUser() {
+        Socio mockNewSocio = new Socio(3,"99932405D","Oscar", "Lanuza", "oscar@email.com", "C Subida 128", "991-003-323","Monoparental",true, LocalDate.now().plusDays(1), null, new ArrayList<>());
+        SocioDto socioDto = new SocioDto(3L,"99932405D","Oscar", "Lanuza", "oscar@email.com", "991-003-323", true,"Monoparental" ,LocalDate.now().plusDays(1), null);
+        Usuario usuario = Usuario.builder()
+                .id(10L)
+                .name("Oscar Lanuza")
+                .email("oscar@email.com")
+                .password("encoded-password")
+                .active(true)
+                .build();
+
+        when(socioRepository.existsBydni(mockNewSocio.getDni())).thenReturn(false);
+        when(accessUserService.createAccessUser("Oscar Lanuza", "oscar@email.com", "SOCIO"))
+                .thenReturn(new AccessCredentialsDto(usuario, "ABCDE-23456"));
+        when(socioRepository.save(any(Socio.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(mapper.map(any(Socio.class), eq(SocioDto.class))).thenReturn(socioDto);
+
+        SocioAccessResponseDto response = socioService.addWithAccess(mockNewSocio);
+
+        assertEquals(3L, response.getSocio().getId());
+        assertEquals(10L, response.getUsuarioId());
+        assertEquals("oscar@email.com", response.getEmail());
+        assertEquals("ABCDE-23456", response.getInitialPassword());
+        assertNotNull(mockNewSocio.getUsuario());
+        assertEquals("encoded-password", mockNewSocio.getUsuario().getPassword());
+
+        verify(accessUserService, times(1)).createAccessUser("Oscar Lanuza", "oscar@email.com", "SOCIO");
+        verify(socioRepository, times(1)).save(mockNewSocio);
+    }
+
+    @Test
     public void testModify() {
 
         Socio mockSocio = new Socio(3,"77732405D","Eduardo", "Lanuza", "email@email.com", "C Subida 128", "991-003-323","Monoparental",false, LocalDate.now().plusDays(1), null, new ArrayList<>());
@@ -172,6 +223,56 @@ public class SocioServiceTest {
 
         assertNotEquals(mockSocio.getName(), result.getName());
         verify(socioRepository, times(1)).save(any(Socio.class));
+    }
+
+    @Test
+    public void testRegenerateAccessCodeExistingUser() {
+        Socio socio = new Socio(3,"99932405D","Oscar", "Lanuza", "oscar@email.com", "C Subida 128", "991-003-323","Monoparental",true, LocalDate.now().plusDays(1), null, new ArrayList<>());
+        Usuario usuario = Usuario.builder()
+                .id(10L)
+                .name("Oscar Lanuza")
+                .email("oscar@email.com")
+                .password("encoded-password")
+                .active(true)
+                .build();
+        socio.setUsuario(usuario);
+
+        when(socioRepository.findById(3L)).thenReturn(Optional.of(socio));
+        when(accessUserService.regenerateAccessCode(usuario))
+                .thenReturn(new AccessCredentialsDto(usuario, "ZXCVB-12345"));
+
+        AccessCodeResponseDto response = socioService.regenerateAccessCode(3L);
+
+        assertEquals(10L, response.getUsuarioId());
+        assertEquals("oscar@email.com", response.getEmail());
+        assertEquals("ZXCVB-12345", response.getInitialPassword());
+        verify(accessUserService).regenerateAccessCode(usuario);
+        verify(accessUserService, never()).createAccessUser(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    public void testRegenerateAccessCodeCreatesUserWhenMissing() {
+        Socio socio = new Socio(3,"99932405D","Oscar", "Lanuza", "oscar@email.com", "C Subida 128", "991-003-323","Monoparental",true, LocalDate.now().plusDays(1), null, new ArrayList<>());
+        Usuario usuario = Usuario.builder()
+                .id(10L)
+                .name("Oscar Lanuza")
+                .email("oscar@email.com")
+                .password("encoded-password")
+                .active(true)
+                .build();
+
+        when(socioRepository.findById(3L)).thenReturn(Optional.of(socio));
+        when(accessUserService.createAccessUser("Oscar Lanuza", "oscar@email.com", "SOCIO"))
+                .thenReturn(new AccessCredentialsDto(usuario, "ABCDE-23456"));
+        when(socioRepository.save(any(Socio.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AccessCodeResponseDto response = socioService.regenerateAccessCode(3L);
+
+        assertEquals(10L, response.getUsuarioId());
+        assertEquals("ABCDE-23456", response.getInitialPassword());
+        assertNotNull(socio.getUsuario());
+        verify(accessUserService).createAccessUser("Oscar Lanuza", "oscar@email.com", "SOCIO");
+        verify(socioRepository).save(socio);
     }
 
     @Test

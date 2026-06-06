@@ -1,12 +1,12 @@
 package com.svalero.asociation.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Null;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
@@ -14,7 +14,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -68,15 +67,8 @@ public class Participante {
     @OneToMany(mappedBy = "participante")
     private List<InscripcionActividad> inscripciones;
 
-    @ManyToMany
-    @JoinTable(name ="incripcion_actividad",
-            joinColumns = @JoinColumn(name = "participante_id"),
-            inverseJoinColumns = @JoinColumn(name = "actividad_id"))
-    private List<Actividad> actividades;
-
-    @ManyToMany
-    @JoinTable(name ="incripcion_servicio",
-            joinColumns = @JoinColumn(name = "participante_id"),
-            inverseJoinColumns = @JoinColumn(name = "servicio_id"))
-    private List<Servicio> servicios;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", unique = true)
+    @JsonIgnore
+    private Usuario usuario;
 }
