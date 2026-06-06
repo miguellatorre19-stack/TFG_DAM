@@ -8,4 +8,5 @@ export interface Trabajador {
   entryDate?: string;
   contractType?: string;
   active?: boolean;
+  servicioId?: number;
 }
