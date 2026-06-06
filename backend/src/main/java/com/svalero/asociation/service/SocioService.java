@@ -1,6 +1,7 @@
 package com.svalero.asociation.service;
 
 import com.svalero.asociation.dto.AccessCredentialsDto;
+import com.svalero.asociation.dto.AccessCodeResponseDto;
 import com.svalero.asociation.dto.SocioAccessResponseDto;
 import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.exception.BusinessRuleException;
@@ -109,6 +110,31 @@ public class SocioService {
         socio.setActive(socioData.getActive());
 
         return socioRepository.save(socio);
+    }
+
+    @Transactional
+    public AccessCodeResponseDto regenerateAccessCode(long id) {
+        Socio socio = socioRepository.findById(id)
+                .orElseThrow(() -> new SocioNotFoundException("Socio con ID " + id + " no encontrado"));
+
+        AccessCredentialsDto credentials;
+        if (socio.getUsuario() == null) {
+            credentials = accessUserService.createAccessUser(
+                    socio.getName() + " " + socio.getSurname(),
+                    socio.getEmail(),
+                    "SOCIO"
+            );
+            socio.setUsuario(credentials.getUsuario());
+            socioRepository.save(socio);
+        } else {
+            credentials = accessUserService.regenerateAccessCode(socio.getUsuario());
+        }
+
+        return new AccessCodeResponseDto(
+                credentials.getUsuario().getId(),
+                credentials.getUsuario().getEmail(),
+                credentials.getInitialPassword()
+        );
     }
 
     public void delete(long id) {

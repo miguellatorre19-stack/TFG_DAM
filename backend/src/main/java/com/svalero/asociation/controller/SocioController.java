@@ -1,5 +1,6 @@
 package com.svalero.asociation.controller;
 
+import com.svalero.asociation.dto.AccessCodeResponseDto;
 import com.svalero.asociation.dto.SocioAccessResponseDto;
 import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.model.Socio;
@@ -67,6 +68,13 @@ public class SocioController {
         logger.info("PUT/socios");
         Socio updatedsocio = socioService.modify(id, socio);
         return ResponseEntity.ok(updatedsocio);
+    }
+
+    @PostMapping("/v1/socios/{id}/access-code")
+    public ResponseEntity<AccessCodeResponseDto> regenerateSocioAccessCode(@PathVariable long id) {
+        logger.info("POST/socios/{id}/access-code");
+        AccessCodeResponseDto accessCode = socioService.regenerateAccessCode(id);
+        return ResponseEntity.ok(accessCode);
     }
 
     @DeleteMapping("/v1/socios/{id}")
