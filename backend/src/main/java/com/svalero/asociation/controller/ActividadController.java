@@ -82,6 +82,21 @@ public class ActividadController {
         return ResponseEntity.ok(inscripciones);
     }
 
+    @PutMapping("/v1/actividades/{idActivity}/inscripciones/{idInscripcion}")
+    public ResponseEntity<InscripcionActividadOutDto> editInscripcion(@PathVariable long idActivity,
+            @PathVariable long idInscripcion, @Valid @RequestBody InscripcionActividadRequestDto requestDto)
+            throws MethodArgumentNotValidException {
+        InscripcionActividadOutDto updatedInscripcion = inscripcionActividadService.modify(
+                idActivity,
+                idInscripcion,
+                requestDto.getParticipanteId(),
+                requestDto.getState(),
+                requestDto.getPrice()
+        );
+        logger.info("PUT/actividades/{idActivity}/inscripciones/{idInscripcion}");
+        return ResponseEntity.ok(updatedInscripcion);
+    }
+
     @PutMapping("/v1/actividades/{id}")
     public ResponseEntity<Actividad> editActividad(@PathVariable long id, @Valid@RequestBody Actividad actividad) throws MethodArgumentNotValidException{
         Actividad updatedactividad = actividadService.modify(id, actividad);

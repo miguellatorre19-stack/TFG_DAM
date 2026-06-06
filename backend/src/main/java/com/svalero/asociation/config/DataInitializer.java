@@ -26,7 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 
 @Configuration
-@Profile("dev")
+@Profile({"dev-local", "dev-docker"})
 public class DataInitializer {
 
     @Bean
@@ -44,6 +44,7 @@ public class DataInitializer {
                     "TRABAJADOR",
                     "ADMINISTRATIVA",
                     "VOLUNTARIO",
+                    "PARTICIPANTE",
                     "SOCIO"
             );
 

@@ -1,5 +1,6 @@
 package com.svalero.asociation.controller;
 
+import com.svalero.asociation.dto.SocioAccessResponseDto;
 import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.model.Socio;
 import com.svalero.asociation.service.ParticipanteService;
@@ -55,10 +56,10 @@ public class SocioController {
     }
 
     @PostMapping("/v1/socios")
-     public ResponseEntity<Socio> addSocio(@Valid @RequestBody Socio socio) throws MethodArgumentNotValidException {
+     public ResponseEntity<SocioAccessResponseDto> addSocio(@Valid @RequestBody Socio socio) throws MethodArgumentNotValidException {
         logger.info("POST/socios");
-        Socio newsocio = socioService.add(socio);
-        return new ResponseEntity<>(newsocio, HttpStatus.CREATED);
+        SocioAccessResponseDto newSocio = socioService.addWithAccess(socio);
+        return new ResponseEntity<>(newSocio, HttpStatus.CREATED);
     }
 
     @PutMapping("/v1/socios/{id}")

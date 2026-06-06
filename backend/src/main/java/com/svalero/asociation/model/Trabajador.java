@@ -1,6 +1,7 @@
 package com.svalero.asociation.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -56,4 +57,24 @@ public class Trabajador {
     @ManyToOne
     @JoinColumn(name="servicio_id")
     private Servicio servicios;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", unique = true)
+    @JsonIgnore
+    private Usuario usuario;
+
+    public Trabajador(long id, String dni, String name, String surname, String email, String phoneNumber,
+            LocalDate birthDate, LocalDate entryDate, String contractType, Actividad actividad, Servicio servicios) {
+        this.id = id;
+        this.dni = dni;
+        this.name = name;
+        this.surname = surname;
+        this.email = email;
+        this.phoneNumber = phoneNumber;
+        this.birthDate = birthDate;
+        this.entryDate = entryDate;
+        this.contractType = contractType;
+        this.actividad = actividad;
+        this.servicios = servicios;
+    }
 }

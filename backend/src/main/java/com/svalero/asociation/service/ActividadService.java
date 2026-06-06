@@ -6,7 +6,6 @@ import com.svalero.asociation.exception.ActividadNotFoundException;
 import com.svalero.asociation.model.Actividad;
 import com.svalero.asociation.repository.ActividadRepository;
 import org.modelmapper.ModelMapper;
-import org.modelmapper.TypeToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,15 +43,6 @@ public class ActividadService {
         dto.setCanJoin(actividad.getCanJoin());
 
         return dto;
-    }
-
-
-
-    public List<ActividadOutDto> findAllv2(LocalDate dayActivity, Boolean canJoin, Integer capacity) {
-        List<Actividad> actividades = actividadRepository.findByFiltersv2(dayActivity, canJoin, capacity);
-        logger.info("Searching Actividad with filters: {} {} {}", dayActivity, canJoin, capacity);
-        List<ActividadOutDto> actividadOutDtoList = modelMapper.map(actividades, new TypeToken<List<ActividadOutDto>>(){}.getType());
-        return actividadOutDtoList;
     }
 
     public Actividad findById(long id) {

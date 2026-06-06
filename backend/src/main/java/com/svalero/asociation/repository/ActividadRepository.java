@@ -26,12 +26,4 @@ public interface ActividadRepository extends CrudRepository<Actividad, Long> {
     List<Actividad> findByFilters(@Param("dayActivity") LocalDate dayActivity,
                                  @Param("canJoin") Boolean canJoin,
                                  @Param("duration") Float duration);
-
-    @Query("SELECT s FROM actividad s WHERE " +
-            "(:dayActivity IS NULL OR s.dayActivity = :dayActivity) AND " +
-            "(:canJoin IS NULL OR s.canJoin = :canJoin) AND " +
-            "(:capacity IS NULL OR s.capacity = :capacity)")
-    List<Actividad> findByFiltersv2(@Param("dayActivity") LocalDate dayActivity,
-                                  @Param("canJoin") Boolean canJoin,
-                                  @Param("capacity") Integer capacity);
 }
