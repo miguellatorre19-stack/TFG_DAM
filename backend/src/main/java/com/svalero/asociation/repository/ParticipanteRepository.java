@@ -11,12 +11,15 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ParticipanteRepository extends CrudRepository<Participante, Long> {
     List <Participante> findAll();
 
     boolean existsBydni(@Pattern(regexp = "\\d{8}[A-Z]") @NotBlank String dni);
+
+    Optional<Participante> findByUsuarioEmail(String email);
 
     @Query("SELECT s FROM participantes s JOIN FETCH s.socio WHERE " +
             "(:birthDate IS NULL OR s.birthDate >= :birthDate) AND " +

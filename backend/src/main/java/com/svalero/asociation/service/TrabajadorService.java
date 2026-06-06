@@ -1,6 +1,7 @@
 package com.svalero.asociation.service;
 
 import com.svalero.asociation.dto.AccessCredentialsDto;
+import com.svalero.asociation.dto.AccessCodeResponseDto;
 import com.svalero.asociation.dto.TrabajadorAccessResponseDto;
 import com.svalero.asociation.dto.TrabajadorDto;
 import com.svalero.asociation.dto.TrabajadorOutDto;
@@ -16,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -142,6 +144,31 @@ public class TrabajadorService {
 
         Trabajador updatedTrabajador = modify(id, trabajador);
         return modelMapper.map(updatedTrabajador, TrabajadorOutDto.class);
+    }
+
+    @Transactional
+    public AccessCodeResponseDto regenerateAccessCode(long id) {
+        Trabajador trabajador = trabajadorRepository.findById(id)
+                .orElseThrow(() -> new TrabajadorNotFoundException("Trabajador con la ID:"+ id+ "no encontrado"));
+
+        AccessCredentialsDto credentials;
+        if (trabajador.getUsuario() == null) {
+            credentials = accessUserService.createAccessUser(
+                    trabajador.getName() + " " + trabajador.getSurname(),
+                    trabajador.getEmail(),
+                    "TRABAJADOR"
+            );
+            trabajador.setUsuario(credentials.getUsuario());
+            trabajadorRepository.save(trabajador);
+        } else {
+            credentials = accessUserService.regenerateAccessCode(trabajador.getUsuario());
+        }
+
+        return new AccessCodeResponseDto(
+                credentials.getUsuario().getId(),
+                credentials.getUsuario().getEmail(),
+                credentials.getInitialPassword()
+        );
     }
 
     public void delete(long id) {

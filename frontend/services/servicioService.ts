@@ -12,3 +12,17 @@ export async function getServicios(): Promise<Servicio[]> {
     throw error;
   }
 }
+
+export async function inscribirServicio(
+  servicioId: number,
+  participanteId: number
+): Promise<void> {
+  await apiFetch<void>(`/servicios/${servicioId}/inscripciones`, {
+    method: "POST",
+    body: JSON.stringify({
+      participanteId,
+      state: "ENVIADA",
+      price: 0,
+    }),
+  });
+}

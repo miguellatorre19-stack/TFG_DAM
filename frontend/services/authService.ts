@@ -1,5 +1,5 @@
 import { apiFetch } from "./api";
-import type { LoginRequest, LoginResponse } from "@/types/auth";
+import type { LoginRequest, LoginResponse, MeResponse } from "@/types/auth";
 
 export async function login(data: LoginRequest): Promise<LoginResponse> {
   return apiFetch<LoginResponse>("/auth/login", {
@@ -26,4 +26,8 @@ export function getToken(): string | null {
 export function getUser(): LoginResponse | null {
   const user = localStorage.getItem("user");
   return user ? (JSON.parse(user) as LoginResponse) : null;
+}
+
+export async function getMe(): Promise<MeResponse> {
+  return apiFetch<MeResponse>("/me");
 }

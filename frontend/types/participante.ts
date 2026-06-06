@@ -8,4 +8,5 @@ export interface Participante {
   birthDate?: string;
   needs?: string;
   typeRel?: string;
+  socioID?: number;
 }
