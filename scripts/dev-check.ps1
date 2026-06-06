@@ -22,7 +22,7 @@ function Check-Port($port, $name) {
 Load-Env $EnvFile
 
 $serverPort = if ($env:SERVER_PORT) { $env:SERVER_PORT } else { "8080" }
-$dbHostPort = if ($env:DB_HOST_PORT) { $env:DB_HOST_PORT } else { "3308" }
+$dbHostPort = if ($env:DB_PORT) { $env:DB_PORT } else { "3308" }
 
 $ok = $true
 $ok = (Check-Port $serverPort "API") -and $ok

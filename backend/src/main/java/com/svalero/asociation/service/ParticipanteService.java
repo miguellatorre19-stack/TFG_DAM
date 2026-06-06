@@ -2,6 +2,7 @@ package com.svalero.asociation.service;
 
 
 import com.svalero.asociation.dto.AccessCredentialsDto;
+import com.svalero.asociation.dto.AccessCodeResponseDto;
 import com.svalero.asociation.dto.ParticipanteAccessResponseDto;
 import com.svalero.asociation.dto.ParticipanteDto;
 import com.svalero.asociation.dto.ParticipanteOutDto;
@@ -18,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -102,6 +104,31 @@ public class ParticipanteService {
         logger.info("Updating participante with ID: {}", id);
         modelMapper.map(participanteDto, oldparticipante);
         return participanteRepository.save(oldparticipante);
+    }
+
+    @Transactional
+    public AccessCodeResponseDto regenerateAccessCode(long id) {
+        Participante participante = participanteRepository.findById(id)
+                .orElseThrow(() -> new ParticipanteNotFoundException("Participante con ID:" + id + "no encontrado"));
+
+        AccessCredentialsDto credentials;
+        if (participante.getUsuario() == null) {
+            credentials = accessUserService.createAccessUser(
+                    participante.getName() + " " + participante.getSurname(),
+                    participante.getEmail(),
+                    "PARTICIPANTE"
+            );
+            participante.setUsuario(credentials.getUsuario());
+            participanteRepository.save(participante);
+        } else {
+            credentials = accessUserService.regenerateAccessCode(participante.getUsuario());
+        }
+
+        return new AccessCodeResponseDto(
+                credentials.getUsuario().getId(),
+                credentials.getUsuario().getEmail(),
+                credentials.getInitialPassword()
+        );
     }
 
     public void delete(long id) {

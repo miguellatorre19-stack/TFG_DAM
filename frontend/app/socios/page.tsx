@@ -3,14 +3,17 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
+import CredentialsNotice from "@/components/CredentialsNotice";
 import { getUser } from "@/services/authService";
 import {
   createSocio,
   deleteSocio,
   getSocios,
+  regenerateSocioAccessCode,
   updateSocio,
   type SocioFormData,
 } from "@/services/socioService";
+import type { IssuedAccessCredentials } from "@/types/access";
 import type { Socio } from "@/types/socio";
 
 function createEmptyForm(): SocioFormData {
@@ -35,8 +38,11 @@ export default function SociosPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [issuedCredentials, setIssuedCredentials] =
+    useState<IssuedAccessCredentials | null>(null);
 
   async function loadSocios() {
     setLoading(true);
@@ -82,6 +88,7 @@ export default function SociosPage() {
     setEditingSocioId(socio.id);
     setSuccessMessage("");
     setError("");
+    setIssuedCredentials(null);
 
     setFormData({
       name: socio.name ?? "",
@@ -102,6 +109,7 @@ export default function SociosPage() {
     setFormData(createEmptyForm());
     setError("");
     setSuccessMessage("");
+    setIssuedCredentials(null);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -109,13 +117,15 @@ export default function SociosPage() {
     setSaving(true);
     setError("");
     setSuccessMessage("");
+    setIssuedCredentials(null);
 
     try {
       if (editingSocioId) {
         await updateSocio(editingSocioId, formData);
         setSuccessMessage("Socio actualizado correctamente.");
       } else {
-        await createSocio(formData);
+        const createdSocio = await createSocio(formData);
+        setIssuedCredentials(createdSocio);
         setSuccessMessage("Socio creado correctamente.");
       }
 
@@ -127,6 +137,27 @@ export default function SociosPage() {
       setError("No se ha podido guardar el socio. Revisa los campos.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleRegenerateAccessCode(socio: Socio) {
+    if (!window.confirm("Se generara un nuevo codigo de acceso para este socio. El anterior dejara de ser valido.")) {
+      return;
+    }
+
+    setRegeneratingId(socio.id);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      const credentials = await regenerateSocioAccessCode(socio.id);
+      setIssuedCredentials(credentials);
+      setSuccessMessage("Codigo de acceso regenerado correctamente.");
+    } catch (error) {
+      console.error(error);
+      setError("No se ha podido regenerar el codigo de acceso.");
+    } finally {
+      setRegeneratingId(null);
     }
   }
 
@@ -301,6 +332,14 @@ export default function SociosPage() {
             </p>
           )}
 
+          {issuedCredentials && (
+            <CredentialsNotice
+              credentials={issuedCredentials}
+              entityLabel="socio"
+              onDismiss={() => setIssuedCredentials(null)}
+            />
+          )}
+
           <div className="mt-6 flex gap-3">
             <button
               type="submit"
@@ -374,6 +413,14 @@ export default function SociosPage() {
                           className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                         >
                           Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRegenerateAccessCode(socio)}
+                          disabled={regeneratingId === socio.id}
+                          className="rounded-lg border border-amber-300 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {regeneratingId === socio.id ? "Regenerando..." : "Regenerar acceso"}
                         </button>
                         <button
                           onClick={() => handleDelete(socio.id)}

@@ -1,5 +1,8 @@
 package com.svalero.asociation.service;
 
+import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.AccessCredentialsDto;
+import com.svalero.asociation.dto.ParticipanteAccessResponseDto;
 import com.svalero.asociation.dto.ParticipanteDto;
 import com.svalero.asociation.dto.ParticipanteOutDto;
 import com.svalero.asociation.dto.SocioDto;
@@ -7,6 +10,7 @@ import com.svalero.asociation.exception.BusinessRuleException;
 import com.svalero.asociation.exception.ParticipanteNotFoundException;
 import com.svalero.asociation.model.Participante;
 import com.svalero.asociation.model.Socio;
+import com.svalero.asociation.model.Usuario;
 import com.svalero.asociation.repository.ParticipanteRepository;
 import com.svalero.asociation.repository.SocioRepository;
 import org.junit.jupiter.api.Test;
@@ -51,6 +55,9 @@ class ParticipanteServiceTest {
 
     @Mock
     private SocioService socioService;
+
+    @Mock
+    private AccessUserService accessUserService;
 
     @Test
     void testFindAll() {
@@ -184,6 +191,74 @@ class ParticipanteServiceTest {
         verify(participanteRepository).findById(77L);
         verify(modelMapper, never()).map(any(), any(Participante.class));
         verify(participanteRepository, never()).save(any(Participante.class));
+    }
+
+    @Test
+    void testAddDtoWithAccess() {
+        ParticipanteDto participanteDto = buildParticipanteDto("77777777U", "Alberto", 1L);
+        Socio socio = new Socio();
+        socio.setId(1L);
+        SocioDto socioDto = new SocioDto();
+        socioDto.setId(1L);
+        Usuario usuario = Usuario.builder()
+                .id(8L)
+                .name("Alberto Gomara")
+                .email("email@email.com")
+                .password("encoded-password")
+                .active(true)
+                .build();
+
+        doAnswer(invocation -> {
+            ParticipanteDto source = invocation.getArgument(0);
+            Participante target = invocation.getArgument(1);
+            target.setDni(source.getDni());
+            target.setName(source.getName());
+            target.setSurname(source.getSurname());
+            target.setEmail(source.getEmail());
+            target.setPhoneNumber(source.getPhoneNumber());
+            target.setBirthDate(source.getBirthDate());
+            target.setNeeds(source.getNeeds());
+            target.setTypeRel(source.getTypeRel());
+            return null;
+        }).when(modelMapper).map(eq(participanteDto), any(Participante.class));
+
+        when(participanteRepository.existsBydni("77777777U")).thenReturn(false);
+        when(socioService.findById(1L)).thenReturn(socioDto);
+        when(socioRepository.findById(1L)).thenReturn(Optional.of(socio));
+        when(accessUserService.createAccessUser("Alberto Gomara", "email@email.com", "PARTICIPANTE"))
+                .thenReturn(new AccessCredentialsDto(usuario, "ABCDE-23456"));
+        when(participanteRepository.save(any(Participante.class))).thenAnswer(i -> i.getArgument(0));
+        when(modelMapper.map(any(Participante.class), eq(ParticipanteDto.class))).thenReturn(participanteDto);
+
+        ParticipanteAccessResponseDto response = participanteService.addDtoWithAccess(participanteDto, 1L);
+
+        assertEquals(8L, response.getUsuarioId());
+        assertEquals("ABCDE-23456", response.getInitialPassword());
+        assertEquals("email@email.com", response.getEmail());
+        verify(accessUserService).createAccessUser("Alberto Gomara", "email@email.com", "PARTICIPANTE");
+    }
+
+    @Test
+    void testRegenerateAccessCodeExistingUser() {
+        Participante participante = buildParticipante(1L, "77777777U", "Alberto", 1L);
+        Usuario usuario = Usuario.builder()
+                .id(8L)
+                .name("Alberto Gomara")
+                .email("email@email.com")
+                .password("encoded-password")
+                .active(true)
+                .build();
+        participante.setUsuario(usuario);
+
+        when(participanteRepository.findById(1L)).thenReturn(Optional.of(participante));
+        when(accessUserService.regenerateAccessCode(usuario))
+                .thenReturn(new AccessCredentialsDto(usuario, "ZXCVB-12345"));
+
+        AccessCodeResponseDto response = participanteService.regenerateAccessCode(1L);
+
+        assertEquals(8L, response.getUsuarioId());
+        assertEquals("ZXCVB-12345", response.getInitialPassword());
+        verify(accessUserService).regenerateAccessCode(usuario);
     }
 
     @Test

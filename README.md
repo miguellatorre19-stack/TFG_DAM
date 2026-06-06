@@ -1,33 +1,21 @@
 # TEA Gestion - Proyecto DAM
 
-Aplicacion web de gestion interna para una asociacion TEA. El proyecto esta organizado como monorepo de trabajo con backend Spring Boot, frontend Next.js y base de datos MariaDB en Docker.
+Aplicacion web de gestion interna y area privada para una asociacion TEA. El proyecto se trabaja como monorepo con backend Spring Boot, frontend Next.js y base de datos MariaDB en Docker.
 
-## Estado Actual
+## Convencion Unica De Arranque
 
-Implementado actualmente:
+La configuracion queda simplificada a una sola forma oficial:
 
-- Backend REST con Spring Boot.
-- Frontend con Next.js, React y TypeScript.
-- Base de datos MariaDB mediante Docker Compose.
-- Autenticacion con JWT.
-- Control de acceso por roles en backend.
-- Swagger/OpenAPI para documentar la API.
-- Datos demo en perfiles de desarrollo.
-- CRUD backend de socios, participantes, actividades, servicios y trabajadores.
-- Inscripciones a actividades en backend.
-- Frontend con login, dashboard y navegacion.
-- Frontend con CRUD completo de socios.
-- Frontend con listados de participantes, actividades, servicios y trabajadores.
+```txt
+Frontend local:        http://localhost:3000
+Backend local:         http://localhost:8080
+API base:              http://localhost:8080/api/v1
+Swagger:               http://localhost:8080/swagger-ui/index.html
+MariaDB desde el host: 127.0.0.1:3308
+MariaDB en Docker:     3306 dentro del contenedor
+```
 
-Pendiente o parcial:
-
-- CRUD frontend completo de participantes, actividades, servicios y trabajadores.
-- Inscripcion a actividades desde frontend.
-- Gestion de usuarios y roles desde panel de administracion.
-- Zona privada diferenciada para socios/participantes.
-- Modulo de noticias/comunicados.
-- Dashboard con metricas reales.
-- Integracion con WordPress.
+No se usan perfiles manuales de Spring para desarrollo local. No uses `dev`, `dev-local` ni `dev-docker`.
 
 ## Estructura
 
@@ -36,31 +24,10 @@ TFG_DAM/
 +-- backend/
 +-- frontend/
 +-- docs/
-+-- docker-compose-dev.yaml
-+-- docker-compose-prod.yaml
-+-- .env.example
++-- scripts/
++-- docker-compose.yaml
++-- .env
 +-- README.md
-```
-
-## Puertos Y Perfiles
-
-Convencion actual:
-
-```txt
-Frontend local:        http://localhost:3000
-Backend local:         http://localhost:8080
-API base:              http://localhost:8080/api/v1
-Swagger:               http://localhost:8080/swagger-ui/index.html
-MariaDB desde el host: localhost:3308
-MariaDB en Docker:     db:3306
-```
-
-Perfiles Spring:
-
-```txt
-dev-local   -> backend ejecutado en local contra MariaDB en localhost:3308
-dev-docker  -> backend ejecutado dentro de Docker contra MariaDB en db:3306
-test        -> tests con H2 en memoria
 ```
 
 ## Requisitos
@@ -75,30 +42,27 @@ Nota: si `mvnw.cmd` falla con `"powershell" no se reconoce`, usa Maven instalado
 
 ## Configuracion
 
-Copia el archivo de ejemplo:
-
-```cmd
-copy .env.example .env
-```
-
-Variables principales:
+Hay un unico `.env` en la raiz del proyecto:
 
 ```env
-SPRING_PROFILES_ACTIVE=dev-local
 SERVER_PORT=8080
 FRONTEND_URL=http://localhost:3000
 
+DB_HOST=127.0.0.1
+DB_PORT=3308
 DB_NAME=association
 DB_USER=association_user
 DB_PASSWORD=association_password
 DB_ROOT_PASSWORD=root_password
-DB_HOST=127.0.0.1
-DB_PORT=3308
-DB_HOST_PORT=3308
-DB_CONTAINER_PORT=3306
+
+SEED_DATA_ENABLED=true
+JWT_SECRET=dev_secret_key_for_tfg_dam_project_2026_change_me_please
+JWT_EXPIRATION_MS=86400000
 
 NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
 ```
+
+La aplicacion tambien tiene valores por defecto equivalentes en `backend/src/main/resources/application.properties`, por lo que el backend local puede arrancar aunque no cargues el `.env` manualmente.
 
 ## Arranque Local
 
@@ -108,75 +72,61 @@ Usa tres terminales.
 
 Desde la raiz del proyecto:
 
-```cmd
-docker compose --env-file .env -f docker-compose-dev.yaml up -d db
+```powershell
+docker compose --env-file .env up -d db
 ```
 
 Comprueba que esta sana:
 
-```cmd
-docker ps
+```powershell
+docker compose --env-file .env ps
 ```
 
-Debe aparecer:
+Debe aparecer el contenedor:
 
 ```txt
-association-dev-db   healthy   0.0.0.0:3308->3306/tcp
+association-db   healthy   0.0.0.0:3308->3306/tcp
 ```
 
-Si tienes un contenedor antiguo usando el mismo puerto, paralo primero:
+Si queda un contenedor antiguo ocupando el puerto, paralo antes:
 
-```cmd
-docker rm -f asociation-dev-db
+```powershell
+docker rm -f association-dev-db
 ```
 
 ### Terminal 2: Backend
 
 Desde la raiz del proyecto:
 
-```cmd
-cd backend
-mvn spring-boot:run -Dspring-boot.run.profiles=dev-local
+```powershell
+& "C:\maven\apache-maven-3.9.11\bin\mvn.cmd" -f backend\pom.xml spring-boot:run
 ```
 
-Si `mvn` no esta en PATH pero tienes Maven instalado en `C:\maven`:
+Alternativa si `mvn` esta en PATH:
 
-```cmd
-cd backend
-"C:\maven\apache-maven-3.9.11\bin\mvn.cmd" spring-boot:run -Dspring-boot.run.profiles=dev-local
+```powershell
+mvn -f backend\pom.xml spring-boot:run
 ```
 
-El backend quedara disponible en:
+Si venias de una configuracion antigua, limpia primero:
 
-```txt
-http://localhost:8080
-```
-
-Swagger:
-
-```txt
-http://localhost:8080/swagger-ui/index.html
+```powershell
+& "C:\maven\apache-maven-3.9.11\bin\mvn.cmd" -f backend\pom.xml clean
 ```
 
 ### Terminal 3: Frontend
 
 Desde la raiz del proyecto:
 
-```cmd
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-El frontend quedara disponible en:
-
-```txt
-http://localhost:3000
-```
-
 ## Usuario Demo
 
-Con perfil `dev-local` o `dev-docker`, se crea un usuario administrador inicial:
+Si `SEED_DATA_ENABLED=true`, se crea un usuario administrador inicial:
 
 ```txt
 Email: admin@teagestion.local
@@ -184,42 +134,59 @@ Password: Admin1234
 Rol: ADMIN
 ```
 
+## Funcionalidad Actual
+
+- Backend REST con Spring Boot.
+- Frontend con Next.js, React y TypeScript.
+- Base de datos MariaDB mediante Docker Compose.
+- Autenticacion con JWT.
+- Control de acceso por roles.
+- CRUD backend de socios, participantes, actividades, servicios y trabajadores.
+- Creacion automatica de usuarios para socios, participantes y trabajadores.
+- Area privada para socios/participantes.
+- Consulta e inscripcion a actividades y servicios.
+- Endpoint `GET /api/v1/me` para resolver el perfil autenticado.
+- Swagger/OpenAPI para documentar la API.
+
 ## Tests
 
 Backend:
 
-```cmd
-mvn -f backend\pom.xml test
-```
-
-Alternativa con Maven absoluto:
-
-```cmd
-"C:\maven\apache-maven-3.9.11\bin\mvn.cmd" -f backend\pom.xml test
+```powershell
+& "C:\maven\apache-maven-3.9.11\bin\mvn.cmd" -f backend\pom.xml test
 ```
 
 Frontend:
 
-```cmd
+```powershell
 cd frontend
 npm run lint
 npm run build
 ```
 
-## Docker Completo
+## Reglas Para Evitar Confusiones
 
-Para levantar base de datos y backend dentro de Docker:
+No usar:
 
-```cmd
-docker compose --env-file .env -f docker-compose-prod.yaml up --build
+```txt
+SPRING_PROFILES_ACTIVE
+DEV_DB_HOST
+DEV_DB_PORT
+DEV_DB_NAME
+DEV_DB_USER
+DEV_DB_PASSWORD
+application-dev.properties
+docker-compose-dev.yaml
+docker-compose-prod.yaml
+backend/.env
 ```
 
-En este modo el backend usa el perfil `dev-docker` y conecta contra la base de datos por el host interno `db:3306`.
+Usar solo:
 
-## Notas De Desarrollo
+```txt
+.env
+docker-compose.yaml
+backend/src/main/resources/application.properties
+```
 
-- Para desarrollo habitual, usa `docker-compose-dev.yaml` solo para la base de datos y ejecuta backend/frontend en local.
-- No uses `localhost:3306` para la base de datos desde el backend local. El puerto del host es `3308`.
-- Dentro de Docker, el backend no debe usar `localhost` para MariaDB; debe usar `db:3306`.
-- CORS se configura con `FRONTEND_URL`.
-- La API consumida por el frontend se configura con `NEXT_PUBLIC_API_URL`.
+Si aparece un error JDBC apuntando a `localhost:3306`, casi seguro queda una variable o archivo antiguo. Limpia `target` con Maven y comprueba que no exista `SPRING_PROFILES_ACTIVE` en la terminal.

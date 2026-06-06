@@ -1,6 +1,7 @@
 package com.svalero.asociation.service;
 
 import com.svalero.asociation.dto.AccessCredentialsDto;
+import com.svalero.asociation.dto.AccessCodeResponseDto;
 import com.svalero.asociation.dto.SocioAccessResponseDto;
 import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.model.Rol;
@@ -222,6 +223,56 @@ public class SocioServiceTest {
 
         assertNotEquals(mockSocio.getName(), result.getName());
         verify(socioRepository, times(1)).save(any(Socio.class));
+    }
+
+    @Test
+    public void testRegenerateAccessCodeExistingUser() {
+        Socio socio = new Socio(3,"99932405D","Oscar", "Lanuza", "oscar@email.com", "C Subida 128", "991-003-323","Monoparental",true, LocalDate.now().plusDays(1), null, new ArrayList<>());
+        Usuario usuario = Usuario.builder()
+                .id(10L)
+                .name("Oscar Lanuza")
+                .email("oscar@email.com")
+                .password("encoded-password")
+                .active(true)
+                .build();
+        socio.setUsuario(usuario);
+
+        when(socioRepository.findById(3L)).thenReturn(Optional.of(socio));
+        when(accessUserService.regenerateAccessCode(usuario))
+                .thenReturn(new AccessCredentialsDto(usuario, "ZXCVB-12345"));
+
+        AccessCodeResponseDto response = socioService.regenerateAccessCode(3L);
+
+        assertEquals(10L, response.getUsuarioId());
+        assertEquals("oscar@email.com", response.getEmail());
+        assertEquals("ZXCVB-12345", response.getInitialPassword());
+        verify(accessUserService).regenerateAccessCode(usuario);
+        verify(accessUserService, never()).createAccessUser(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    public void testRegenerateAccessCodeCreatesUserWhenMissing() {
+        Socio socio = new Socio(3,"99932405D","Oscar", "Lanuza", "oscar@email.com", "C Subida 128", "991-003-323","Monoparental",true, LocalDate.now().plusDays(1), null, new ArrayList<>());
+        Usuario usuario = Usuario.builder()
+                .id(10L)
+                .name("Oscar Lanuza")
+                .email("oscar@email.com")
+                .password("encoded-password")
+                .active(true)
+                .build();
+
+        when(socioRepository.findById(3L)).thenReturn(Optional.of(socio));
+        when(accessUserService.createAccessUser("Oscar Lanuza", "oscar@email.com", "SOCIO"))
+                .thenReturn(new AccessCredentialsDto(usuario, "ABCDE-23456"));
+        when(socioRepository.save(any(Socio.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AccessCodeResponseDto response = socioService.regenerateAccessCode(3L);
+
+        assertEquals(10L, response.getUsuarioId());
+        assertEquals("ABCDE-23456", response.getInitialPassword());
+        assertNotNull(socio.getUsuario());
+        verify(accessUserService).createAccessUser("Oscar Lanuza", "oscar@email.com", "SOCIO");
+        verify(socioRepository).save(socio);
     }
 
     @Test

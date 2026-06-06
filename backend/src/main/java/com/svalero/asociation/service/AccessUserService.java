@@ -51,6 +51,14 @@ public class AccessUserService {
         return new AccessCredentialsDto(usuarioRepository.save(usuario), initialPassword);
     }
 
+    public AccessCredentialsDto regenerateAccessCode(Usuario usuario) {
+        String initialPassword = generateAccessCode();
+        usuario.setPassword(passwordEncoder.encode(initialPassword));
+        usuario.setActive(true);
+
+        return new AccessCredentialsDto(usuarioRepository.save(usuario), initialPassword);
+    }
+
     private String generateAccessCode() {
         StringBuilder code = new StringBuilder();
 

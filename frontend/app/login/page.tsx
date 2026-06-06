@@ -20,7 +20,11 @@ export default function LoginPage() {
     try {
       const response = await login({ email, password });
       saveSession(response);
-      router.push("/dashboard");
+      const privateRoles = ["SOCIO", "PARTICIPANTE"];
+      const shouldUsePrivateArea = response.roles.some((role) =>
+        privateRoles.includes(role)
+      );
+      router.push(shouldUsePrivateArea ? "/area-privada" : "/dashboard");
     } catch {
       setError("No se ha podido iniciar sesión. Revisa el email y la contraseña.");
     } finally {
