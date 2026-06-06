@@ -12,3 +12,17 @@ export async function getActividades(): Promise<Actividad[]> {
     throw error;
   }
 }
+
+export async function inscribirActividad(
+  actividadId: number,
+  participanteId: number
+): Promise<void> {
+  await apiFetch<void>(`/actividades/${actividadId}/inscripciones`, {
+    method: "POST",
+    body: JSON.stringify({
+      participanteId,
+      state: "ENVIADA",
+      price: 0,
+    }),
+  });
+}

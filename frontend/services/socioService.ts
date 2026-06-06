@@ -1,5 +1,6 @@
 import { apiFetch } from "./api";
 import type { Socio } from "@/types/socio";
+import type { IssuedAccessCredentials, SocioAccessResponse } from "@/types/access";
 
 export interface SocioFormData {
   name: string;
@@ -24,8 +25,8 @@ export async function getSocios(): Promise<Socio[]> {
   }
 }
 
-export async function createSocio(data: SocioFormData): Promise<Socio> {
-  return apiFetch<Socio>("/socios", {
+export async function createSocio(data: SocioFormData): Promise<SocioAccessResponse> {
+  return apiFetch<SocioAccessResponse>("/socios", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -41,5 +42,13 @@ export async function updateSocio(id: number, data: SocioFormData): Promise<Soci
 export async function deleteSocio(id: number): Promise<void> {
   return apiFetch<void>(`/socios/${id}`, {
     method: "DELETE",
+  });
+}
+
+export async function regenerateSocioAccessCode(
+  id: number
+): Promise<IssuedAccessCredentials> {
+  return apiFetch<IssuedAccessCredentials>(`/socios/${id}/access-code`, {
+    method: "POST",
   });
 }
