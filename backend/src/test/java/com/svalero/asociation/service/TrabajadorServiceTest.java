@@ -1,7 +1,13 @@
 package com.svalero.asociation.service;
 
+import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.AccessCredentialsDto;
+import com.svalero.asociation.dto.TrabajadorAccessResponseDto;
+import com.svalero.asociation.dto.TrabajadorDto;
+import com.svalero.asociation.dto.TrabajadorOutDto;
 import com.svalero.asociation.model.Servicio;
 import com.svalero.asociation.model.Trabajador;
+import com.svalero.asociation.model.Usuario;
 import com.svalero.asociation.repository.TrabajadorRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +36,9 @@ public class TrabajadorServiceTest{
     private ModelMapper mapper;
     @Mock
     private ServicioService servicioService;
+
+    @Mock
+    private AccessUserService accessUserService;
 
     @Test
     void findAll() {
@@ -127,6 +136,46 @@ public class TrabajadorServiceTest{
     }
 
     @Test
+    void testAddDtoWithAccess() {
+        TrabajadorDto trabajadorDto = new TrabajadorDto(
+                "77777777U",
+                "Hector",
+                "Aladia",
+                "email@email",
+                "888-566-323",
+                LocalDate.now().minusDays(2),
+                null,
+                "Tiempo Parcial",
+                1L
+        );
+        Servicio servicio = new Servicio(1, "trabajo social", "anual", "ninguno", 40f, 3, null, null);
+        Trabajador trabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now().minusDays(2), null, "Tiempo Parcial", null, null);
+        TrabajadorOutDto trabajadorOutDto = new TrabajadorOutDto();
+        trabajadorOutDto.setId(1L);
+        Usuario usuario = Usuario.builder()
+                .id(12L)
+                .name("Hector Aladia")
+                .email("email@email")
+                .password("encoded-password")
+                .active(true)
+                .build();
+
+        when(mapper.map(trabajadorDto, Trabajador.class)).thenReturn(trabajador);
+        when(trabajadorRepository.existsBydni("77777777U")).thenReturn(false);
+        when(servicioService.findById(1L)).thenReturn(servicio);
+        when(accessUserService.createAccessUser("Hector Aladia", "email@email", "TRABAJADOR"))
+                .thenReturn(new AccessCredentialsDto(usuario, "ABCDE-23456"));
+        when(trabajadorRepository.save(any(Trabajador.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(mapper.map(any(Trabajador.class), eq(TrabajadorOutDto.class))).thenReturn(trabajadorOutDto);
+
+        TrabajadorAccessResponseDto response = trabajadorService.addDtoWithAccess(trabajadorDto, 1L);
+
+        assertEquals(12L, response.getUsuarioId());
+        assertEquals("ABCDE-23456", response.getInitialPassword());
+        verify(accessUserService).createAccessUser("Hector Aladia", "email@email", "TRABAJADOR");
+    }
+
+    @Test
     void testModify() {
 
         Trabajador oldTrabajador =   new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now(), LocalDate.now(), "Tiempo Parcial", null, null);
@@ -182,6 +231,29 @@ public class TrabajadorServiceTest{
         assertNull(result.getServicios());
         verify(servicioService, never()).findById(anyLong());
         verify(trabajadorRepository, times(1)).save(oldTrabajador);
+    }
+
+    @Test
+    void testRegenerateAccessCodeExistingUser() {
+        Trabajador trabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now(), LocalDate.now(), "Tiempo Parcial", null, null);
+        Usuario usuario = Usuario.builder()
+                .id(12L)
+                .name("Hector Aladia")
+                .email("email@email")
+                .password("encoded-password")
+                .active(true)
+                .build();
+        trabajador.setUsuario(usuario);
+
+        when(trabajadorRepository.findById(1L)).thenReturn(Optional.of(trabajador));
+        when(accessUserService.regenerateAccessCode(usuario))
+                .thenReturn(new AccessCredentialsDto(usuario, "ZXCVB-12345"));
+
+        AccessCodeResponseDto response = trabajadorService.regenerateAccessCode(1L);
+
+        assertEquals(12L, response.getUsuarioId());
+        assertEquals("ZXCVB-12345", response.getInitialPassword());
+        verify(accessUserService).regenerateAccessCode(usuario);
     }
 
     @Test
