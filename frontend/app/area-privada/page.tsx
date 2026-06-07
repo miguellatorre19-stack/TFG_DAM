@@ -30,6 +30,12 @@ interface LocalRequest {
   createdAt: string;
 }
 
+interface SubmissionFeedback {
+  status: "success" | "error";
+  title: string;
+  message: string;
+}
+
 const sections: Array<{ id: SectionId; label: string; helper: string }> = [
   { id: "inicio", label: "Inicio", helper: "Resumen y siguientes pasos" },
   { id: "actividades", label: "Actividades", helper: "Consultar e inscribirse" },
@@ -65,6 +71,7 @@ export default function PrivateAreaPage() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const [requests, setRequests] = useState<LocalRequest[]>([]);
+  const [submissionFeedback, setSubmissionFeedback] = useState<SubmissionFeedback | null>(null);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -85,25 +92,38 @@ export default function PrivateAreaPage() {
       setRequests(storedRequests ? JSON.parse(storedRequests) : []);
 
       async function loadContent() {
-        try {
-          const [meData, activityData, serviceData] = await Promise.all([
-            getMe(),
-            getActividades(),
-            getServicios(),
-          ]);
-          setProfile(meData);
-          if (meData.participanteIds.length === 1) {
-            setParticipantId(String(meData.participanteIds[0]));
+        const [meResult, activityResult, serviceResult] = await Promise.allSettled([
+          getMe(),
+          getActividades(),
+          getServicios(),
+        ]);
+
+        if (meResult.status === "fulfilled") {
+          setProfile(meResult.value);
+          if (meResult.value.participanteIds.length === 1) {
+            setParticipantId(String(meResult.value.participanteIds[0]));
           }
-          setActividades(activityData);
-          setServicios(serviceData);
-        } catch {
-          setLoadError(
-            "No se han podido cargar las actividades y servicios. Revisa la conexion y vuelve a intentarlo."
-          );
-        } finally {
-          setLoading(false);
         }
+
+        if (activityResult.status === "fulfilled") {
+          setActividades(activityResult.value);
+        }
+
+        if (serviceResult.status === "fulfilled") {
+          setServicios(serviceResult.value);
+        }
+
+        if (
+          meResult.status === "rejected" ||
+          activityResult.status === "rejected" ||
+          serviceResult.status === "rejected"
+        ) {
+          setLoadError(
+            "No se ha podido cargar todo el contenido. La pantalla mostrara la informacion disponible."
+          );
+        }
+
+        setLoading(false);
       }
 
       loadContent();
@@ -133,11 +153,13 @@ export default function PrivateAreaPage() {
   const filteredServices = useMemo(() => {
     const filter = serviceFilter.trim().toLowerCase();
     return servicios.filter((servicio) =>
-      `${servicio.description ?? ""} ${servicio.typeService ?? ""} ${servicio.periodicity ?? ""}`
+      `${servicio.description ?? ""} ${servicio.periodicity ?? ""} ${servicio.requisites ?? ""}`
         .toLowerCase()
         .includes(filter)
     );
   }, [servicios, serviceFilter]);
+
+  const hasParticipantAccess = (profile?.participanteIds?.length ?? 0) > 0;
 
   function closeSession() {
     logout();
@@ -145,10 +167,23 @@ export default function PrivateAreaPage() {
   }
 
   function startWizard(item: SelectedItem) {
+    if (!hasParticipantAccess) {
+      setFormError(
+        "Este usuario no tiene participantes asociados. Contacta con la asociacion para que revise el acceso."
+      );
+      setSubmissionFeedback(null);
+      setActiveSection(item.kind === "actividad" ? "actividades" : "servicios");
+      return;
+    }
+
     setSelectedItem(item);
     setWizardStep(1);
+    setParticipantId(
+      profile?.participanteIds.length === 1 ? String(profile.participanteIds[0]) : ""
+    );
     setFormError("");
     setConfirmation("");
+    setSubmissionFeedback(null);
     setActiveSection(item.kind === "actividad" ? "actividades" : "servicios");
     window.setTimeout(() => {
       document.getElementById("inscription-panel")?.scrollIntoView({
@@ -160,8 +195,11 @@ export default function PrivateAreaPage() {
   function cancelWizard() {
     setSelectedItem(null);
     setWizardStep(1);
-    setParticipantId("");
+    setParticipantId(
+      profile?.participanteIds.length === 1 ? String(profile.participanteIds[0]) : ""
+    );
     setFormError("");
+    setSubmissionFeedback(null);
   }
 
   async function submitInscription(event: FormEvent<HTMLFormElement>) {
@@ -173,7 +211,19 @@ export default function PrivateAreaPage() {
       return;
     }
 
-    const parsedParticipantId = Number(participantId);
+    if (!hasParticipantAccess) {
+      setFormError(
+        "Este usuario no tiene participantes asociados. Contacta con la asociacion para que revise el acceso."
+      );
+      setWizardStep(2);
+      return;
+    }
+
+    const resolvedParticipantId =
+      participantId || (profile?.participanteIds.length === 1
+        ? String(profile.participanteIds[0])
+        : "");
+    const parsedParticipantId = Number(resolvedParticipantId);
     if (!Number.isInteger(parsedParticipantId) || parsedParticipantId <= 0) {
       setFormError("Selecciona el participante que va a usar esta actividad o servicio.");
       setWizardStep(2);
@@ -201,12 +251,23 @@ export default function PrivateAreaPage() {
       setConfirmation(
         `Solicitud ${request.id} enviada. La asociacion revisara la informacion.`
       );
-      setActiveSection("solicitudes");
-      cancelWizard();
-    } catch {
-      setFormError(
-        "No se ha podido enviar la solicitud. Revisa el ID de participante y vuelve a pulsar Enviar solicitud."
-      );
+      setSubmissionFeedback({
+        status: "success",
+        title: "Solicitud enviada correctamente",
+        message: `La solicitud ${request.id} ha quedado registrada. La asociacion revisara la informacion y te respondera mas adelante.`,
+      });
+      setFormError("");
+      setWizardStep(3);
+    } catch (error) {
+      setSubmissionFeedback({
+        status: "error",
+        title: "No se ha podido enviar la solicitud",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Revisa el participante asociado y vuelve a intentarlo. Si el problema continua, contacta con la asociacion.",
+      });
+      setWizardStep(3);
     } finally {
       setSubmitting(false);
     }
@@ -346,13 +407,18 @@ export default function PrivateAreaPage() {
               La pantalla muestra una tarea principal cada vez. Las acciones indican
               que ocurrira despues de pulsarlas.
             </p>
-            {profile && (
+          {profile && (
               <p className="mt-3 rounded-2xl bg-[#f7f2e8] px-4 py-3 text-sm text-[#3d4b47]">
                 Perfil detectado: <strong>{profile.profileType}</strong>
                 {profile.socioId ? ` | Socio #${profile.socioId}` : ""}
                 {profile.participanteIds.length > 0
                   ? ` | Participantes disponibles: ${profile.participanteIds.join(", ")}`
                   : ""}
+              </p>
+            )}
+            {profile && !hasParticipantAccess && (
+              <p className="mt-3 rounded-2xl border border-[#bf6b5b] bg-[#fff4ef] px-4 py-3 text-sm text-[#703729]">
+                Este usuario no tiene participantes asociados. No se pueden enviar inscripciones hasta que administracion vincule al menos un participante.
               </p>
             )}
           </div>
@@ -392,6 +458,8 @@ export default function PrivateAreaPage() {
                 capacity: actividad.capacity,
               }))}
               onStart={startWizard}
+              canStart={hasParticipantAccess}
+              blockedMessage="No hay participantes asociados a este usuario."
             />
           )}
 
@@ -411,6 +479,8 @@ export default function PrivateAreaPage() {
                 capacity: servicio.capacity,
               }))}
               onStart={startWizard}
+              canStart={hasParticipantAccess}
+              blockedMessage="No hay participantes asociados a este usuario."
             />
           )}
 
@@ -422,8 +492,10 @@ export default function PrivateAreaPage() {
               participantIds={profile?.participanteIds ?? []}
               formError={formError}
               submitting={submitting}
+              submissionFeedback={submissionFeedback}
               onStepChange={setWizardStep}
               onParticipantIdChange={setParticipantId}
+              onGoToRequests={() => setActiveSection("solicitudes")}
               onCancel={cancelWizard}
               onSubmit={submitInscription}
             />
@@ -509,6 +581,8 @@ function ContentList({
   loading,
   items,
   onStart,
+  canStart,
+  blockedMessage,
 }: {
   kind: ItemKind;
   title: string;
@@ -518,6 +592,8 @@ function ContentList({
   loading: boolean;
   items: SelectedItem[];
   onStart: (item: SelectedItem) => void;
+  canStart: boolean;
+  blockedMessage: string;
 }) {
   const actionText = kind === "actividad" ? "Iniciar inscripcion" : "Solicitar servicio";
 
@@ -548,6 +624,12 @@ function ContentList({
         </p>
       )}
 
+      {!canStart && !loading && (
+        <p className="mt-6 rounded-2xl border border-[#bf6b5b] bg-[#fff4ef] p-4 text-[#703729]">
+          {blockedMessage}
+        </p>
+      )}
+
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         {items.map((item) => (
           <article
@@ -575,7 +657,8 @@ function ContentList({
             <button
               type="button"
               onClick={() => onStart(item)}
-              className="mt-5 w-full rounded-2xl bg-[#23675b] px-5 py-3 font-bold text-white hover:bg-[#1c554b]"
+              disabled={!canStart}
+              className="mt-5 w-full rounded-2xl bg-[#23675b] px-5 py-3 font-bold text-white hover:bg-[#1c554b] disabled:cursor-not-allowed disabled:bg-[#9bb7af]"
             >
               {actionText}
             </button>
@@ -593,8 +676,10 @@ function InscriptionWizard({
   participantIds,
   formError,
   submitting,
+  submissionFeedback,
   onStepChange,
   onParticipantIdChange,
+  onGoToRequests,
   onCancel,
   onSubmit,
 }: {
@@ -604,11 +689,16 @@ function InscriptionWizard({
   participantIds: number[];
   formError: string;
   submitting: boolean;
+  submissionFeedback: SubmissionFeedback | null;
   onStepChange: (step: WizardStep) => void;
   onParticipantIdChange: (value: string) => void;
+  onGoToRequests: () => void;
   onCancel: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const primaryActionLabel =
+    selectedItem?.kind === "actividad" ? "Solicitar plaza" : "Solicitar servicio";
+
   return (
     <section
       id="inscription-panel"
@@ -638,44 +728,91 @@ function InscriptionWizard({
                 </span>
                 <span className="mt-1 block font-bold">
                   {itemStep === 1 && "Preparar"}
-                  {itemStep === 2 && "Completar"}
-                  {itemStep === 3 && "Revisar"}
+                  {itemStep === 2 && "Solicitar"}
+                  {itemStep === 3 && "Resultado"}
                 </span>
               </button>
             ))}
           </div>
 
           {step === 1 && (
-            <div className="rounded-3xl bg-[#f7f2e8] p-5">
-              <h4 className="text-xl font-bold">Antes de empezar</h4>
-              <p className="mt-3 leading-7">
-                Vas a solicitar: <strong>{selectedItem.title}</strong>.
+            <div className="rounded-3xl border-2 border-[#23675b] bg-[#eef7f3] p-7 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#23675b]">
+                Preparar solicitud
               </p>
-              <ul className="mt-3 space-y-2 leading-7">
-                <li>La pantalla usara el participante asociado a tu usuario.</li>
-                <li>Podras revisar la solicitud antes de enviarla.</li>
-                <li>La asociacion revisara la solicitud despues del envio.</li>
-              </ul>
+              <h4 className="mt-3 text-2xl font-bold">Vas a solicitar {selectedItem.title}</h4>
+              <p className="mt-4 text-base leading-8 text-[#3d4b47]">
+                Revisa primero los datos y avanza cuando tengas claro que quieres
+                pedir esta plaza o este servicio.
+              </p>
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                <div className="rounded-2xl bg-white px-4 py-4">
+                  <p className="text-sm font-semibold text-[#23675b]">Tipo de solicitud</p>
+                  <p className="mt-2 text-lg font-bold text-[#23312f]">
+                    {selectedItem.kind === "actividad" ? "Actividad" : "Servicio"}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-white px-4 py-4">
+                  <p className="text-sm font-semibold text-[#23675b]">Plazas o acceso</p>
+                  <p className="mt-2 text-lg font-bold text-[#23312f]">
+                    {selectedItem.capacity ?? "Pendiente de confirmar"}
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => onStepChange(2)}
-                className="mt-5 rounded-2xl bg-[#23675b] px-5 py-3 font-bold text-white"
+                className="mt-6 w-full rounded-2xl bg-[#23675b] px-6 py-4 text-lg font-bold text-white hover:bg-[#1c554b]"
               >
-                Completar datos
+                {primaryActionLabel}
               </button>
             </div>
           )}
 
           {step === 2 && (
-            <div className="rounded-3xl bg-[#f7f2e8] p-5">
+            <div className="rounded-3xl border-2 border-[#d8d1c2] bg-[#f7f2e8] p-6">
+              <h4 className="text-2xl font-bold text-[#23312f]">Datos de la solicitud</h4>
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl bg-white px-4 py-4">
+                  <p className="text-sm font-semibold text-[#23675b]">Solicitud</p>
+                  <p className="mt-2 text-lg font-bold text-[#23312f]">
+                    {selectedItem.title}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-white px-4 py-4">
+                  <p className="text-sm font-semibold text-[#23675b]">Tipo</p>
+                  <p className="mt-2 text-lg font-bold text-[#23312f]">
+                    {selectedItem.kind === "actividad" ? "Actividad" : "Servicio"}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-white px-4 py-4">
+                  <p className="text-sm font-semibold text-[#23675b]">Fecha</p>
+                  <p className="mt-2 text-lg font-bold text-[#23312f]">
+                    {selectedItem.date ?? "Por confirmar"}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-white px-4 py-4">
+                  <p className="text-sm font-semibold text-[#23675b]">Duracion</p>
+                  <p className="mt-2 text-lg font-bold text-[#23312f]">
+                    {selectedItem.duration ? `${selectedItem.duration} h` : "No indicada"}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-white px-4 py-4 md:col-span-2">
+                  <p className="text-sm font-semibold text-[#23675b]">Plazas</p>
+                  <p className="mt-2 text-lg font-bold text-[#23312f]">
+                    {selectedItem.capacity ?? "No indicado"}
+                  </p>
+                </div>
+              </div>
+
               {participantIds.length === 0 && (
-                <p className="rounded-2xl border border-[#bf6b5b] bg-[#fff4ef] p-4 text-[#703729]">
+                <p className="mt-5 rounded-2xl border border-[#bf6b5b] bg-[#fff4ef] p-4 text-[#703729]">
                   No hay ningun participante asociado a este usuario. Contacta con la asociacion para revisar el acceso.
                 </p>
               )}
 
               {participantIds.length === 1 && (
-                <div className="rounded-2xl border border-[#d8d1c2] bg-white p-4">
+                <div className="mt-5 rounded-2xl border border-[#d8d1c2] bg-white p-4">
                   <p className="text-lg font-bold">Participante seleccionado</p>
                   <p className="mt-2 text-[#52615c]">
                     Se usara automaticamente el participante #{participantIds[0]}.
@@ -684,7 +821,7 @@ function InscriptionWizard({
               )}
 
               {participantIds.length > 1 && (
-                <label className="block">
+                <label className="mt-5 block">
                   <span className="mb-2 block text-lg font-bold">Selecciona participante</span>
                   <span className="mb-3 block text-sm text-[#52615c]">
                     Elige quien va a usar la actividad o servicio.
@@ -704,66 +841,84 @@ function InscriptionWizard({
                   </select>
                 </label>
               )}
-              <button
-                type="button"
-                onClick={() => onStepChange(3)}
-                disabled={participantIds.length === 0}
-                className="mt-5 rounded-2xl bg-[#23675b] px-5 py-3 font-bold text-white"
-              >
-                Revisar solicitud
-              </button>
-            </div>
-          )}
+              {formError && (
+                <p className="mt-5 rounded-2xl border border-[#bf6b5b] bg-[#fff4ef] p-4 text-[#703729]">
+                  {formError}
+                </p>
+              )}
 
-          {step === 3 && (
-            <div className="rounded-3xl bg-[#f7f2e8] p-5">
-              <h4 className="text-xl font-bold">Resumen antes de enviar</h4>
-              <dl className="mt-4 space-y-3">
-                <div>
-                  <dt className="font-semibold">Solicitud</dt>
-                  <dd>{selectedItem.title}</dd>
-                </div>
-                <div>
-                  <dt className="font-semibold">Tipo</dt>
-                  <dd>{selectedItem.kind === "actividad" ? "Actividad" : "Servicio"}</dd>
-                </div>
-                <div>
-                  <dt className="font-semibold">Participante</dt>
-                  <dd>{participantId ? `Participante #${participantId}` : "Falta seleccionar participante"}</dd>
-                </div>
-              </dl>
-              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button
                   type="submit"
-                  disabled={submitting}
-                  className="rounded-2xl bg-[#23675b] px-5 py-3 font-bold text-white disabled:bg-[#9bb7af]"
+                  disabled={submitting || participantIds.length === 0}
+                  className="rounded-2xl bg-[#23675b] px-5 py-4 font-bold text-white disabled:bg-[#9bb7af]"
                 >
-                  {submitting ? "Enviando solicitud..." : "Enviar solicitud"}
+                  {submitting ? "Enviando solicitud..." : primaryActionLabel}
                 </button>
                 <button
                   type="button"
-                  onClick={() => onStepChange(2)}
-                  className="rounded-2xl border border-[#23675b] bg-white px-5 py-3 font-bold text-[#23675b]"
+                  onClick={() => onStepChange(1)}
+                  className="rounded-2xl border border-[#23675b] bg-white px-5 py-4 font-bold text-[#23675b]"
                 >
-                  Corregir datos
+                  Volver atras
                 </button>
               </div>
             </div>
           )}
 
-          {formError && (
-            <p className="rounded-2xl border border-[#bf6b5b] bg-[#fff4ef] p-4 text-[#703729]">
-              {formError}
-            </p>
+          {step === 3 && submissionFeedback && (
+            <div
+              className={`rounded-3xl border-2 p-7 shadow-sm ${
+                submissionFeedback.status === "success"
+                  ? "border-[#7fa58e] bg-[#edf7ef] text-[#244c35]"
+                  : "border-[#bf6b5b] bg-[#fff4ef] text-[#703729]"
+              }`}
+            >
+              <p className="text-sm font-semibold uppercase tracking-[0.18em]">
+                Resultado
+              </p>
+              <h4 className="mt-3 text-2xl font-bold">{submissionFeedback.title}</h4>
+              <p className="mt-4 text-base leading-8">{submissionFeedback.message}</p>
+
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                {submissionFeedback.status === "success" && (
+                  <button
+                    type="button"
+                    onClick={onGoToRequests}
+                    className="rounded-2xl bg-[#23675b] px-5 py-4 font-bold text-white"
+                  >
+                    Ver mis solicitudes
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="rounded-2xl border border-current bg-white px-5 py-4 font-bold"
+                >
+                  Volver al listado
+                </button>
+                {submissionFeedback.status === "error" && (
+                  <button
+                    type="button"
+                    onClick={() => onStepChange(2)}
+                    className="rounded-2xl border border-current bg-white px-5 py-4 font-bold"
+                  >
+                    Revisar y reintentar
+                  </button>
+                )}
+              </div>
+            </div>
           )}
 
-          <button
-            type="button"
-            onClick={onCancel}
-            className="text-sm font-semibold text-[#52615c] underline"
-          >
-            Cancelar solicitud y volver al listado
-          </button>
+          {step !== 3 && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="text-sm font-semibold text-[#52615c] underline"
+            >
+              Cancelar solicitud y volver al listado
+            </button>
+          )}
         </form>
       )}
     </section>

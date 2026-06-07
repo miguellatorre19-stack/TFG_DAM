@@ -1,4 +1,4 @@
-import { apiFetch } from "./api";
+import { ApiError, apiFetch } from "./api";
 import type { Participante } from "@/types/participante";
 import type {
   IssuedAccessCredentials,
@@ -9,7 +9,7 @@ export async function getParticipantes(): Promise<Participante[]> {
   try {
     return await apiFetch<Participante[]>("/participantes");
   } catch (error) {
-    if (error instanceof Error && error.message.includes("Error HTTP 404")) {
+    if (error instanceof ApiError && error.status === 404) {
       return [];
     }
 
@@ -33,9 +33,27 @@ export async function createParticipante(
   socioId: number,
   data: ParticipanteFormData
 ): Promise<ParticipanteAccessResponse> {
+  const payload = buildParticipantePayload(data);
+
   return apiFetch<ParticipanteAccessResponse>(`/socios/${socioId}/participante`, {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateParticipante(
+  id: number,
+  data: ParticipanteFormData
+): Promise<Participante> {
+  return apiFetch<Participante>(`/participantes/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(buildParticipantePayload(data)),
+  });
+}
+
+export async function deleteParticipante(id: number): Promise<void> {
+  await apiFetch<void>(`/participantes/${id}`, {
+    method: "DELETE",
   });
 }
 
@@ -45,4 +63,12 @@ export async function regenerateParticipanteAccessCode(
   return apiFetch<IssuedAccessCredentials>(`/participantes/${id}/access-code`, {
     method: "POST",
   });
+}
+
+function buildParticipantePayload(data: ParticipanteFormData) {
+  return {
+    ...data,
+    phoneNumber: data.phoneNumber || undefined,
+    birthDate: data.birthDate || undefined,
+  };
 }

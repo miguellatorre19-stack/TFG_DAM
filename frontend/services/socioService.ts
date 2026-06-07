@@ -1,4 +1,4 @@
-import { apiFetch } from "./api";
+import { ApiError, apiFetch } from "./api";
 import type { Socio } from "@/types/socio";
 import type { IssuedAccessCredentials, SocioAccessResponse } from "@/types/access";
 
@@ -17,7 +17,7 @@ export async function getSocios(): Promise<Socio[]> {
   try {
     return await apiFetch<Socio[]>("/socios");
   } catch (error) {
-    if (error instanceof Error && error.message.includes("Error HTTP 404")) {
+    if (error instanceof ApiError && error.status === 404) {
       return [];
     }
 

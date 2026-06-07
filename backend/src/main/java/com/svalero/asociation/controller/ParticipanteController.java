@@ -71,7 +71,15 @@ public class ParticipanteController {
     public ResponseEntity<ParticipanteDto> editParticipante(@PathVariable long id, @Valid@RequestBody ParticipanteDto participanteDto) throws MethodArgumentNotValidException{
 
         Participante updatedparticipante = participanteService.modifyDto(id, participanteDto);
-        ParticipanteDto participanteDtoUpdated = modelMapper.map(updatedparticipante, ParticipanteDto.class);
+        ParticipanteDto participanteDtoUpdated = new ParticipanteDto();
+        participanteDtoUpdated.setDni(updatedparticipante.getDni());
+        participanteDtoUpdated.setName(updatedparticipante.getName());
+        participanteDtoUpdated.setSurname(updatedparticipante.getSurname());
+        participanteDtoUpdated.setEmail(updatedparticipante.getEmail());
+        participanteDtoUpdated.setPhoneNumber(updatedparticipante.getPhoneNumber());
+        participanteDtoUpdated.setBirthDate(updatedparticipante.getBirthDate());
+        participanteDtoUpdated.setNeeds(updatedparticipante.getNeeds());
+        participanteDtoUpdated.setTypeRel(updatedparticipante.getTypeRel());
         participanteDtoUpdated.setSocioID(participanteDto.getSocioID());
         logger.info("PUT/participantes/{id}");
         return ResponseEntity.ok(participanteDtoUpdated);

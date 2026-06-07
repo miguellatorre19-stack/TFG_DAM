@@ -44,8 +44,9 @@ public class TrabajadorService {
 
     public List<TrabajadorOutDto> findAllDto(LocalDate entryDate, String name, String contractType){
         List<Trabajador> trabajadores = findAll(entryDate, name, contractType);
-        return modelMapper.map(trabajadores, new TypeToken<List<TrabajadorOutDto>>() {
-        }.getType());
+        return trabajadores.stream()
+                .map(this::toOutDto)
+                .toList();
     }
 
     public Trabajador findById(long id) {
@@ -56,7 +57,7 @@ public class TrabajadorService {
 
     public TrabajadorOutDto findDtoById(long id) {
         Trabajador foundtrabajador = findById(id);
-        return modelMapper.map(foundtrabajador, TrabajadorOutDto.class);
+        return toOutDto(foundtrabajador);
     }
 
     public Trabajador add(Trabajador trabajador, long id) {
@@ -102,9 +103,8 @@ public class TrabajadorService {
         trabajador.setUsuario(savedUsuario);
         Trabajador savedTrabajador = trabajadorRepository.save(trabajador);
 
-        TrabajadorOutDto trabajadorOutDto = modelMapper.map(savedTrabajador, TrabajadorOutDto.class);
         return new TrabajadorAccessResponseDto(
-                trabajadorOutDto,
+                toOutDto(savedTrabajador),
                 savedUsuario.getId(),
                 savedUsuario.getEmail(),
                 credentials.getInitialPassword()
@@ -143,7 +143,7 @@ public class TrabajadorService {
         }
 
         Trabajador updatedTrabajador = modify(id, trabajador);
-        return modelMapper.map(updatedTrabajador, TrabajadorOutDto.class);
+        return toOutDto(updatedTrabajador);
     }
 
     @Transactional
@@ -176,5 +176,36 @@ public class TrabajadorService {
 
         logger.info("Deleted Trabajador with ID: {} ", id);
         trabajadorRepository.delete(trabajador);
+    }
+
+    private TrabajadorOutDto toOutDto(Trabajador trabajador) {
+        TrabajadorOutDto dto = new TrabajadorOutDto();
+        dto.setId(trabajador.getId());
+        dto.setDni(trabajador.getDni());
+        dto.setName(trabajador.getName());
+        dto.setSurname(trabajador.getSurname());
+        dto.setEmail(trabajador.getEmail());
+        dto.setPhoneNumber(trabajador.getPhoneNumber());
+        dto.setBirthDate(trabajador.getBirthDate());
+        dto.setEntryDate(trabajador.getEntryDate());
+        dto.setContractType(trabajador.getContractType());
+        dto.setServicioOutDto(toServicioOutDto(trabajador.getServicios()));
+        return dto;
+    }
+
+    private com.svalero.asociation.dto.ServicioOutDto toServicioOutDto(Servicio servicio) {
+        if (servicio == null) {
+            return null;
+        }
+
+        com.svalero.asociation.dto.ServicioOutDto dto = new com.svalero.asociation.dto.ServicioOutDto();
+        dto.setId(servicio.getId());
+        dto.setDescription(servicio.getDescription());
+        dto.setPeriodicity(servicio.getPeriodicity());
+        dto.setRequisites(servicio.getRequisites());
+        dto.setDuration(servicio.getDuration());
+        dto.setCapacity(servicio.getCapacity());
+        dto.setTrabajadoresIds(List.of());
+        return dto;
     }
 }

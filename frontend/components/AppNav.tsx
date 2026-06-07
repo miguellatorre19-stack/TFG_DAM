@@ -2,10 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { logout } from "@/services/authService";
+import {
+  canAccessAdminPanel,
+  canAccessPrivateArea,
+  getUser,
+  logout,
+} from "@/services/authService";
 
 export default function AppNav() {
   const router = useRouter();
+  const user = getUser();
+  const showAdminLinks = canAccessAdminPanel(user);
+  const showPrivateAreaLink = canAccessPrivateArea(user);
 
   function handleLogout() {
     logout();
@@ -21,47 +29,67 @@ export default function AppNav() {
         </div>
 
         <nav className="flex items-center gap-4 text-sm">
-          <Link
-            href="/dashboard"
-            className="font-medium text-slate-700 hover:text-indigo-600"
-          >
-            Dashboard
-          </Link>
+          {showAdminLinks && (
+            <>
+              <Link
+                href="/dashboard"
+                className="font-medium text-slate-700 hover:text-indigo-600"
+              >
+                Dashboard
+              </Link>
 
-          <Link
-            href="/socios"
-            className="font-medium text-slate-700 hover:text-indigo-600"
-          >
-            Socios
-          </Link>
+              <Link
+                href="/socios"
+                className="font-medium text-slate-700 hover:text-indigo-600"
+              >
+                Socios
+              </Link>
 
-	  <Link
- 	    href="/participantes"
-            className="font-medium text-slate-700 hover:text-indigo-600"
-          >
-            Participantes
-          </Link>
+              <Link
+                href="/participantes"
+                className="font-medium text-slate-700 hover:text-indigo-600"
+              >
+                Participantes
+              </Link>
 
-          <Link
-            href="/actividades"
-            className="font-medium text-slate-700 hover:text-indigo-600"
-          >
-            Actividades
-          </Link>
+              <Link
+                href="/actividades"
+                className="font-medium text-slate-700 hover:text-indigo-600"
+              >
+                Actividades
+              </Link>
 
-          <Link
-            href="/servicios"
-            className="font-medium text-slate-700 hover:text-indigo-600"
-          >
-            Servicios
-          </Link>
+              <Link
+                href="/servicios"
+                className="font-medium text-slate-700 hover:text-indigo-600"
+              >
+                Servicios
+              </Link>
 
-          <Link
-            href="/trabajadores"
-            className="font-medium text-slate-700 hover:text-indigo-600"
-          >
-            Trabajadores
-          </Link>
+              <Link
+                href="/trabajadores"
+                className="font-medium text-slate-700 hover:text-indigo-600"
+              >
+                Trabajadores
+              </Link>
+
+              <Link
+                href="/inscripciones"
+                className="font-medium text-slate-700 hover:text-indigo-600"
+              >
+                Inscripciones
+              </Link>
+            </>
+          )}
+
+          {showPrivateAreaLink && (
+            <Link
+              href="/area-privada"
+              className="font-medium text-slate-700 hover:text-indigo-600"
+            >
+              Area privada
+            </Link>
+          )}
 
           <button
             onClick={handleLogout}

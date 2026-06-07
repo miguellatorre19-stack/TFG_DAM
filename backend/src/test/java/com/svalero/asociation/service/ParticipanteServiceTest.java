@@ -5,12 +5,13 @@ import com.svalero.asociation.dto.AccessCredentialsDto;
 import com.svalero.asociation.dto.ParticipanteAccessResponseDto;
 import com.svalero.asociation.dto.ParticipanteDto;
 import com.svalero.asociation.dto.ParticipanteOutDto;
-import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.exception.BusinessRuleException;
 import com.svalero.asociation.exception.ParticipanteNotFoundException;
 import com.svalero.asociation.model.Participante;
 import com.svalero.asociation.model.Socio;
 import com.svalero.asociation.model.Usuario;
+import com.svalero.asociation.repository.InscripcionActividadRepository;
+import com.svalero.asociation.repository.InscripcionServicioRepository;
 import com.svalero.asociation.repository.ParticipanteRepository;
 import com.svalero.asociation.repository.SocioRepository;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 
-import java.lang.reflect.Type;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +33,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -54,10 +53,13 @@ class ParticipanteServiceTest {
     private ModelMapper modelMapper;
 
     @Mock
-    private SocioService socioService;
+    private AccessUserService accessUserService;
 
     @Mock
-    private AccessUserService accessUserService;
+    private InscripcionActividadRepository inscripcionActividadRepository;
+
+    @Mock
+    private InscripcionServicioRepository inscripcionServicioRepository;
 
     @Test
     void testFindAll() {
@@ -66,36 +68,28 @@ class ParticipanteServiceTest {
         Participante p2 = buildParticipante(2L, "88888888P", "Roberto", 20L);
         List<Participante> participantes = List.of(p1, p2);
 
-        ParticipanteOutDto dto1 = buildParticipanteOutDto(1L, "77777777U", "Alberto", 10L);
-        ParticipanteOutDto dto2 = buildParticipanteOutDto(2L, "88888888P", "Roberto", 20L);
-        List<ParticipanteOutDto> expected = List.of(dto1, dto2);
-
         when(participanteRepository.findByFilters(birthDate, "Alberto", "hijo")).thenReturn(participantes);
-        doReturn(expected).when(modelMapper).map(eq(participantes), any(Type.class));
 
         List<ParticipanteOutDto> result = participanteService.findAll(birthDate, "Alberto", "hijo");
 
         assertEquals(2, result.size());
         assertEquals("Alberto", result.get(0).getName());
+        assertEquals(10L, result.get(0).getSocioID());
 
         verify(participanteRepository).findByFilters(birthDate, "Alberto", "hijo");
-        verify(modelMapper).map(eq(participantes), any(Type.class));
     }
 
     @Test
     void testFindById() {
         Participante participante = buildParticipante(1L, "77777777U", "Alberto", 1L);
-        ParticipanteDto dto = buildParticipanteDto("77777777U", "Alberto", 1L);
-
         when(participanteRepository.findById(1L)).thenReturn(Optional.of(participante));
-        when(modelMapper.map(participante, ParticipanteDto.class)).thenReturn(dto);
 
         ParticipanteDto result = participanteService.findById(1L);
 
         assertEquals("Alberto", result.getName());
         assertEquals("77777777U", result.getDni());
+        assertEquals(1L, result.getSocioID());
         verify(participanteRepository).findById(1L);
-        verify(modelMapper).map(participante, ParticipanteDto.class);
     }
 
     @Test
@@ -107,7 +101,6 @@ class ParticipanteServiceTest {
 
         assertTrue(ex.getMessage().contains("99"));
         verify(participanteRepository).findById(99L);
-        verify(modelMapper, never()).map(any(), eq(ParticipanteDto.class));
     }
 
 
@@ -117,9 +110,6 @@ class ParticipanteServiceTest {
 
         Socio socio = new Socio();
         socio.setId(1L);
-
-        SocioDto socioDto = new SocioDto();
-        socioDto.setId(1L);
 
         doAnswer(invocation -> {
             ParticipanteDto source = invocation.getArgument(0);
@@ -138,7 +128,6 @@ class ParticipanteServiceTest {
         }).when(modelMapper).map(eq(participanteDto), any(Participante.class));
 
         when(participanteRepository.existsBydni("77777777U")).thenReturn(false);
-        when(socioService.findById(1L)).thenReturn(socioDto);
         when(socioRepository.findById(1L)).thenReturn(Optional.of(socio));
         when(participanteRepository.save(any(Participante.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -150,7 +139,6 @@ class ParticipanteServiceTest {
 
         verify(modelMapper).map(eq(participanteDto), any(Participante.class));
         verify(participanteRepository).existsBydni("77777777U");
-        verify(socioService).findById(1L);
         verify(socioRepository).findById(1L);
         verify(participanteRepository).save(any(Participante.class));
     }
@@ -198,8 +186,6 @@ class ParticipanteServiceTest {
         ParticipanteDto participanteDto = buildParticipanteDto("77777777U", "Alberto", 1L);
         Socio socio = new Socio();
         socio.setId(1L);
-        SocioDto socioDto = new SocioDto();
-        socioDto.setId(1L);
         Usuario usuario = Usuario.builder()
                 .id(8L)
                 .name("Alberto Gomara")
@@ -223,18 +209,16 @@ class ParticipanteServiceTest {
         }).when(modelMapper).map(eq(participanteDto), any(Participante.class));
 
         when(participanteRepository.existsBydni("77777777U")).thenReturn(false);
-        when(socioService.findById(1L)).thenReturn(socioDto);
         when(socioRepository.findById(1L)).thenReturn(Optional.of(socio));
         when(accessUserService.createAccessUser("Alberto Gomara", "email@email.com", "PARTICIPANTE"))
                 .thenReturn(new AccessCredentialsDto(usuario, "ABCDE-23456"));
         when(participanteRepository.save(any(Participante.class))).thenAnswer(i -> i.getArgument(0));
-        when(modelMapper.map(any(Participante.class), eq(ParticipanteDto.class))).thenReturn(participanteDto);
-
         ParticipanteAccessResponseDto response = participanteService.addDtoWithAccess(participanteDto, 1L);
 
         assertEquals(8L, response.getUsuarioId());
         assertEquals("ABCDE-23456", response.getInitialPassword());
         assertEquals("email@email.com", response.getEmail());
+        assertEquals(1L, response.getParticipante().getSocioID());
         verify(accessUserService).createAccessUser("Alberto Gomara", "email@email.com", "PARTICIPANTE");
     }
 
@@ -264,12 +248,17 @@ class ParticipanteServiceTest {
     @Test
     void testDelete() {
         Participante participante = buildParticipante(1L, "77777777U", "Alberto", 1L);
+        Usuario usuario = Usuario.builder().id(8L).email("email@email.com").build();
+        participante.setUsuario(usuario);
         when(participanteRepository.findById(1L)).thenReturn(Optional.of(participante));
+        when(inscripcionActividadRepository.existsByParticipanteId(1L)).thenReturn(false);
+        when(inscripcionServicioRepository.existsByParticipanteId(1L)).thenReturn(false);
 
         participanteService.delete(1L);
 
         verify(participanteRepository).findById(1L);
         verify(participanteRepository).delete(participante);
+        verify(accessUserService).deleteAccessUser(usuario);
     }
 
     @Test

@@ -9,9 +9,12 @@ import com.svalero.asociation.dto.ParticipanteOutDto;
 import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.exception.BusinessRuleException;
 import com.svalero.asociation.exception.ParticipanteNotFoundException;
+import com.svalero.asociation.exception.SocioNotFoundException;
 import com.svalero.asociation.model.Participante;
 import com.svalero.asociation.model.Usuario;
 import com.svalero.asociation.repository.ParticipanteRepository;
+import com.svalero.asociation.repository.InscripcionActividadRepository;
+import com.svalero.asociation.repository.InscripcionServicioRepository;
 import com.svalero.asociation.repository.SocioRepository;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
@@ -32,9 +35,11 @@ public class ParticipanteService {
     @Autowired
     private SocioRepository socioRepository;
     @Autowired
-    private ModelMapper modelMapper;
+    private InscripcionActividadRepository inscripcionActividadRepository;
     @Autowired
-    private SocioService socioService;
+    private InscripcionServicioRepository inscripcionServicioRepository;
+    @Autowired
+    private ModelMapper modelMapper;
     @Autowired
     private AccessUserService accessUserService;
 
@@ -43,16 +48,16 @@ public class ParticipanteService {
     public List<ParticipanteOutDto> findAll(LocalDate birthDate, String name, String typeRel){
         List<Participante> participantes = participanteRepository.findByFilters(birthDate, name, typeRel);
         logger.info("Searching with filters: {} {} {}", birthDate, name, typeRel);
-        List<ParticipanteOutDto>participanteOutDtoList = modelMapper.map(participantes, new TypeToken<List<ParticipanteOutDto>>(){}.getType());
-        return participanteOutDtoList;
+        return participantes.stream()
+                .map(this::toOutDto)
+                .toList();
     }
 
     public ParticipanteDto findById(long id) {
         Participante participanteSelected = participanteRepository.findById(id).orElseThrow(() -> new ParticipanteNotFoundException("Participante con ID:" + id + "no encontrado"));
-        ParticipanteDto participanteDtoselected = modelMapper.map(participanteSelected, ParticipanteDto.class);
 
         logger.debug("Fetching participante with ID: {}", id);
-        return participanteDtoselected;
+        return toDto(participanteSelected);
     }
 
     public  Participante addDto(ParticipanteDto participanteDto, long id){
@@ -61,8 +66,8 @@ public class ParticipanteService {
         if(participanteRepository.existsBydni(participante.getDni())){
             throw new BusinessRuleException("Un participante con DNI "+participante.getDni()+" ya existe");
         }
-        SocioDto socioDto = socioService.findById(id);
-        participante.setSocio(socioRepository.findById(socioDto.getId()).get());
+        participante.setSocio(socioRepository.findById(id)
+                .orElseThrow(() -> new SocioNotFoundException("Socio con ID:" + id + " no encontrado")));
         return participanteRepository.save(participante);
 
     }
@@ -75,8 +80,8 @@ public class ParticipanteService {
             throw new BusinessRuleException("Un participante con DNI "+participante.getDni()+" ya existe");
         }
 
-        SocioDto socioDto = socioService.findById(id);
-        participante.setSocio(socioRepository.findById(socioDto.getId()).get());
+        participante.setSocio(socioRepository.findById(id)
+                .orElseThrow(() -> new SocioNotFoundException("Socio con ID:" + id + " no encontrado")));
 
         AccessCredentialsDto credentials = accessUserService.createAccessUser(
                 participante.getName() + " " + participante.getSurname(),
@@ -88,11 +93,8 @@ public class ParticipanteService {
         participante.setUsuario(savedUsuario);
         Participante savedParticipante = participanteRepository.save(participante);
 
-        ParticipanteDto responseDto = modelMapper.map(savedParticipante, ParticipanteDto.class);
-        responseDto.setSocioID(id);
-
         return new ParticipanteAccessResponseDto(
-                responseDto,
+                toDto(savedParticipante),
                 savedUsuario.getId(),
                 savedUsuario.getEmail(),
                 credentials.getInitialPassword()
@@ -103,6 +105,16 @@ public class ParticipanteService {
         Participante oldparticipante = participanteRepository.findById(id).orElseThrow(() -> new ParticipanteNotFoundException("Participante con ID:" + id + "no encontrado"));
         logger.info("Updating participante with ID: {}", id);
         modelMapper.map(participanteDto, oldparticipante);
+
+        if (participanteDto.getSocioID() > 0
+                && (oldparticipante.getSocio() == null
+                || oldparticipante.getSocio().getId() != participanteDto.getSocioID())) {
+            oldparticipante.setSocio(socioRepository.findById(participanteDto.getSocioID())
+                    .orElseThrow(() -> new SocioNotFoundException("Socio con ID:" + participanteDto.getSocioID() + " no encontrado")));
+        } else if (participanteDto.getSocioID() <= 0) {
+            oldparticipante.setSocio(null);
+        }
+
         return participanteRepository.save(oldparticipante);
     }
 
@@ -131,9 +143,49 @@ public class ParticipanteService {
         );
     }
 
+    @Transactional
     public void delete(long id) {
         Participante participante = participanteRepository.findById(id).orElseThrow(() -> new ParticipanteNotFoundException("Participante con ID:" + id + "no encontrado"));
-        logger.info("Participante with ID: {} deleted successfully", id);
+
+        if (inscripcionActividadRepository.existsByParticipanteId(id)) {
+            inscripcionActividadRepository.deleteByParticipanteId(id);
+        }
+
+        if (inscripcionServicioRepository.existsByParticipanteId(id)) {
+            inscripcionServicioRepository.deleteByParticipanteId(id);
+        }
+
         participanteRepository.delete(participante);
+        accessUserService.deleteAccessUser(participante.getUsuario());
+        logger.info("Participante with ID: {} deleted successfully", id);
+    }
+
+    private ParticipanteDto toDto(Participante participante) {
+        ParticipanteDto dto = new ParticipanteDto();
+        dto.setDni(participante.getDni());
+        dto.setName(participante.getName());
+        dto.setSurname(participante.getSurname());
+        dto.setEmail(participante.getEmail());
+        dto.setPhoneNumber(participante.getPhoneNumber());
+        dto.setBirthDate(participante.getBirthDate());
+        dto.setNeeds(participante.getNeeds());
+        dto.setTypeRel(participante.getTypeRel());
+        dto.setSocioID(participante.getSocio() != null ? participante.getSocio().getId() : 0);
+        return dto;
+    }
+
+    private ParticipanteOutDto toOutDto(Participante participante) {
+        ParticipanteOutDto dto = new ParticipanteOutDto();
+        dto.setId(participante.getId());
+        dto.setDni(participante.getDni());
+        dto.setName(participante.getName());
+        dto.setSurname(participante.getSurname());
+        dto.setEmail(participante.getEmail());
+        dto.setPhoneNumber(participante.getPhoneNumber());
+        dto.setBirthDate(participante.getBirthDate());
+        dto.setNeeds(participante.getNeeds());
+        dto.setTypeRel(participante.getTypeRel());
+        dto.setSocioID(participante.getSocio() != null ? participante.getSocio().getId() : 0);
+        return dto;
     }
 }
