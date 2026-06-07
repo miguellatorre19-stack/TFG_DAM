@@ -10,10 +10,12 @@ import java.util.Optional;
 @Repository
 public interface InscripcionServicioRepository extends CrudRepository<InscripcionServicio, Long> {
     boolean existsByServicioIdAndParticipanteId(long servicioId, long participanteId);
+    boolean existsByParticipanteId(long participanteId);
 
     List<InscripcionServicio> findByServicioId(long servicioId);
 
     Optional<InscripcionServicio> findByIdAndServicioId(long id, long servicioId);
 
     void deleteByIdAndServicioId(long id, long servicioId);
+    void deleteByParticipanteId(long participanteId);
 }

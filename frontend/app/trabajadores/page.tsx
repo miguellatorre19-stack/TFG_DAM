@@ -4,12 +4,13 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import CredentialsNotice from "@/components/CredentialsNotice";
-import { getUser } from "@/services/authService";
+import { canAccessAdminPanel, getUser } from "@/services/authService";
 import { getServicios } from "@/services/servicioService";
 import {
   createTrabajador,
   getTrabajadores,
   regenerateTrabajadorAccessCode,
+  updateTrabajador,
   type TrabajadorFormData,
 } from "@/services/trabajadorService";
 import type { IssuedAccessCredentials } from "@/types/access";
@@ -37,6 +38,8 @@ export default function TrabajadoresPage() {
   const [formData, setFormData] = useState<TrabajadorFormData>(() =>
     createEmptyForm()
   );
+  const [editingTrabajadorId, setEditingTrabajadorId] = useState<number | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
@@ -72,6 +75,11 @@ export default function TrabajadoresPage() {
       return;
     }
 
+    if (!canAccessAdminPanel(user)) {
+      router.push("/area-privada");
+      return;
+    }
+
     const timeoutId = window.setTimeout(() => {
       loadData();
     }, 0);
@@ -89,6 +97,33 @@ export default function TrabajadoresPage() {
     }));
   }
 
+  function handleEdit(trabajador: Trabajador) {
+    setEditingTrabajadorId(trabajador.id);
+    setSuccessMessage("");
+    setError("");
+    setIssuedCredentials(null);
+    setFormData({
+      dni: trabajador.dni ?? "",
+      name: trabajador.name ?? "",
+      surname: trabajador.surname ?? "",
+      email: trabajador.email ?? "",
+      phoneNumber: trabajador.phoneNumber ?? "",
+      birthDate: trabajador.birthDate ?? "",
+      contractType: trabajador.contractType ?? "",
+      servicioId: trabajador.servicioOutDto?.id ?? trabajador.servicioId ?? 0,
+    });
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleCancelEdit() {
+    setEditingTrabajadorId(null);
+    setFormData(createEmptyForm());
+    setError("");
+    setSuccessMessage("");
+    setIssuedCredentials(null);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -103,14 +138,25 @@ export default function TrabajadoresPage() {
     setIssuedCredentials(null);
 
     try {
-      const createdTrabajador = await createTrabajador(formData.servicioId, formData);
-      setIssuedCredentials(createdTrabajador);
-      setSuccessMessage("Trabajador creado correctamente.");
+      if (editingTrabajadorId) {
+        await updateTrabajador(editingTrabajadorId, formData);
+        setSuccessMessage("Trabajador actualizado correctamente.");
+      } else {
+        const createdTrabajador = await createTrabajador(formData.servicioId, formData);
+        setIssuedCredentials(createdTrabajador);
+        setSuccessMessage("Trabajador creado correctamente.");
+      }
+
       setFormData(createEmptyForm());
+      setEditingTrabajadorId(null);
       await loadData();
     } catch (error) {
       console.error(error);
-      setError("No se ha podido guardar el trabajador. Revisa los campos.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se ha podido guardar el trabajador. Revisa los campos."
+      );
     } finally {
       setSaving(false);
     }
@@ -135,7 +181,11 @@ export default function TrabajadoresPage() {
       setSuccessMessage("Codigo de acceso regenerado correctamente.");
     } catch (error) {
       console.error(error);
-      setError("No se ha podido regenerar el codigo de acceso.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se ha podido regenerar el codigo de acceso."
+      );
     } finally {
       setRegeneratingId(null);
     }
@@ -149,7 +199,7 @@ export default function TrabajadoresPage() {
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-slate-900">Trabajadores</h2>
           <p className="mt-2 text-slate-600">
-            Alta del personal profesional y gestion de sus credenciales de acceso.
+            Alta, edicion y baja del personal profesional, junto con sus credenciales de acceso.
           </p>
         </div>
 
@@ -159,10 +209,12 @@ export default function TrabajadoresPage() {
         >
           <div className="mb-5">
             <h3 className="text-lg font-semibold text-slate-900">
-              Nuevo trabajador
+              {editingTrabajadorId ? "Editar trabajador" : "Nuevo trabajador"}
             </h3>
             <p className="mt-1 text-sm text-slate-600">
-              Cada alta genera un usuario con email y codigo inicial.
+              {editingTrabajadorId
+                ? "Actualiza el perfil profesional y el servicio asignado."
+                : "Cada alta genera un usuario con email y codigo inicial."}
             </p>
           </div>
 
@@ -313,14 +365,28 @@ export default function TrabajadoresPage() {
             />
           )}
 
-          <div className="mt-6">
+          <div className="mt-6 flex gap-3">
             <button
               type="submit"
               disabled={saving || servicios.length === 0}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-300"
             >
-              {saving ? "Guardando..." : "Crear trabajador"}
+              {saving
+                ? "Guardando..."
+                : editingTrabajadorId
+                  ? "Guardar cambios"
+                  : "Crear trabajador"}
             </button>
+
+            {editingTrabajadorId && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+            )}
           </div>
         </form>
 
@@ -343,7 +409,7 @@ export default function TrabajadoresPage() {
                   <th className="px-4 py-3 font-semibold">Nombre</th>
                   <th className="px-4 py-3 font-semibold">Email</th>
                   <th className="px-4 py-3 font-semibold">Telefono</th>
-                  <th className="px-4 py-3 font-semibold">Contrato</th>
+                  <th className="px-4 py-3 font-semibold">Servicio</th>
                   <th className="px-4 py-3 font-semibold">Acciones</th>
                 </tr>
               </thead>
@@ -363,19 +429,28 @@ export default function TrabajadoresPage() {
                       {trabajador.phoneNumber ?? "-"}
                     </td>
                     <td className="px-4 py-3 text-slate-600">
-                      {trabajador.contractType ?? "-"}
+                      {trabajador.servicioOutDto?.description ?? "-"}
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        onClick={() => handleRegenerateAccessCode(trabajador)}
-                        disabled={regeneratingId === trabajador.id}
-                        className="rounded-lg border border-amber-300 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {regeneratingId === trabajador.id
-                          ? "Regenerando..."
-                          : "Regenerar acceso"}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(trabajador)}
+                          className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRegenerateAccessCode(trabajador)}
+                          disabled={regeneratingId === trabajador.id}
+                          className="rounded-lg border border-amber-300 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {regeneratingId === trabajador.id
+                            ? "Regenerando..."
+                            : "Regenerar acceso"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

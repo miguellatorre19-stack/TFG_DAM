@@ -17,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
 import java.util.List;
 
 @Configuration
@@ -55,8 +56,23 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
 
+                        .requestMatchers(HttpMethod.GET, "/api/v1/servicios/*/inscripciones")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/servicios/*/inscripciones")
+                        .hasAnyRole("SOCIO", "PARTICIPANTE")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/servicios/*/inscripciones/*")
+                        .denyAll()
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/servicios/*/inscripciones/*")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/servicios", "/api/v1/servicios/**")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO", "PARTICIPANTE")
+
                         .requestMatchers("/api/v1/servicios", "/api/v1/servicios/**")
-                        .hasAnyRole("ADMIN", "TRABAJADOR")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
 
                         .requestMatchers("/api/v1/trabajadores", "/api/v1/trabajadores/**")
                         .hasRole("ADMIN")
@@ -67,8 +83,23 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/participantes", "/api/v1/participantes/**")
                         .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO", "PARTICIPANTE")
 
-                        .requestMatchers("/api/v1/actividades", "/api/v1/actividades/**")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/actividades/*/inscripciones")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/actividades/*/inscripciones")
+                        .hasAnyRole("SOCIO", "PARTICIPANTE", "VOLUNTARIO")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/actividades/*/inscripciones/*")
+                        .denyAll()
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/actividades/*/inscripciones/*")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/actividades", "/api/v1/actividades/**")
                         .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO", "PARTICIPANTE", "VOLUNTARIO")
+
+                        .requestMatchers("/api/v1/actividades", "/api/v1/actividades/**")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
 
                         .anyRequest().authenticated()
                 )

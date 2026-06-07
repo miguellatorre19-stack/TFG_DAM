@@ -39,8 +39,10 @@ public class ActividadService {
         dto.setId(actividad.getId());
         dto.setDescription(actividad.getDescription());
         dto.setDayActivity(actividad.getDayActivity());
+        dto.setTypeActivity(actividad.getTypeActivity());
         dto.setDuration(actividad.getDuration());
         dto.setCanJoin(actividad.getCanJoin());
+        dto.setCapacity(actividad.getCapacity());
 
         return dto;
     }

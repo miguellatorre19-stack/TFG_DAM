@@ -150,8 +150,6 @@ public class TrabajadorServiceTest{
         );
         Servicio servicio = new Servicio(1, "trabajo social", "anual", "ninguno", 40f, 3, null, null);
         Trabajador trabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now().minusDays(2), null, "Tiempo Parcial", null, null);
-        TrabajadorOutDto trabajadorOutDto = new TrabajadorOutDto();
-        trabajadorOutDto.setId(1L);
         Usuario usuario = Usuario.builder()
                 .id(12L)
                 .name("Hector Aladia")
@@ -166,12 +164,12 @@ public class TrabajadorServiceTest{
         when(accessUserService.createAccessUser("Hector Aladia", "email@email", "TRABAJADOR"))
                 .thenReturn(new AccessCredentialsDto(usuario, "ABCDE-23456"));
         when(trabajadorRepository.save(any(Trabajador.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(mapper.map(any(Trabajador.class), eq(TrabajadorOutDto.class))).thenReturn(trabajadorOutDto);
 
         TrabajadorAccessResponseDto response = trabajadorService.addDtoWithAccess(trabajadorDto, 1L);
 
         assertEquals(12L, response.getUsuarioId());
         assertEquals("ABCDE-23456", response.getInitialPassword());
+        assertEquals(1L, response.getTrabajador().getId());
         verify(accessUserService).createAccessUser("Hector Aladia", "email@email", "TRABAJADOR");
     }
 

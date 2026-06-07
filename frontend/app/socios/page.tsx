@@ -4,10 +4,9 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import CredentialsNotice from "@/components/CredentialsNotice";
-import { getUser } from "@/services/authService";
+import { canAccessAdminPanel, getUser } from "@/services/authService";
 import {
   createSocio,
-  deleteSocio,
   getSocios,
   regenerateSocioAccessCode,
   updateSocio,
@@ -64,6 +63,11 @@ export default function SociosPage() {
 
     if (!user) {
       router.push("/login");
+      return;
+    }
+
+    if (!canAccessAdminPanel(user)) {
+      router.push("/area-privada");
       return;
     }
 
@@ -134,7 +138,11 @@ export default function SociosPage() {
       await loadSocios();
     } catch (error) {
       console.error(error);
-      setError("No se ha podido guardar el socio. Revisa los campos.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se ha podido guardar el socio. Revisa los campos."
+      );
     } finally {
       setSaving(false);
     }
@@ -155,29 +163,13 @@ export default function SociosPage() {
       setSuccessMessage("Codigo de acceso regenerado correctamente.");
     } catch (error) {
       console.error(error);
-      setError("No se ha podido regenerar el codigo de acceso.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se ha podido regenerar el codigo de acceso."
+      );
     } finally {
       setRegeneratingId(null);
-    }
-  }
-
-  async function handleDelete(id: number) {
-    const confirmed = window.confirm("¿Seguro que quieres eliminar este socio?");
-
-    if (!confirmed) {
-      return;
-    }
-
-    setError("");
-    setSuccessMessage("");
-
-    try {
-      await deleteSocio(id);
-      setSuccessMessage("Socio eliminado correctamente.");
-      await loadSocios();
-    } catch (error) {
-      console.error(error);
-      setError("No se ha podido eliminar el socio.");
     }
   }
 
@@ -421,12 +413,6 @@ export default function SociosPage() {
                           className="rounded-lg border border-amber-300 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {regeneratingId === socio.id ? "Regenerando..." : "Regenerar acceso"}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(socio.id)}
-                          className="rounded-lg border border-red-200 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
-                        >
-                          Eliminar
                         </button>
                       </div>
                     </td>

@@ -59,6 +59,14 @@ public class AccessUserService {
         return new AccessCredentialsDto(usuarioRepository.save(usuario), initialPassword);
     }
 
+    public void deleteAccessUser(Usuario usuario) {
+        if (usuario == null || usuario.getId() == null) {
+            return;
+        }
+
+        usuarioRepository.delete(usuario);
+    }
+
     private String generateAccessCode() {
         StringBuilder code = new StringBuilder();
 

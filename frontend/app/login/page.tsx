@@ -2,7 +2,11 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { login, saveSession } from "@/services/authService";
+import {
+  canAccessPrivateArea,
+  login,
+  saveSession,
+} from "@/services/authService";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,11 +24,7 @@ export default function LoginPage() {
     try {
       const response = await login({ email, password });
       saveSession(response);
-      const privateRoles = ["SOCIO", "PARTICIPANTE"];
-      const shouldUsePrivateArea = response.roles.some((role) =>
-        privateRoles.includes(role)
-      );
-      router.push(shouldUsePrivateArea ? "/area-privada" : "/dashboard");
+      router.push(canAccessPrivateArea(response) ? "/area-privada" : "/dashboard");
     } catch {
       setError("No se ha podido iniciar sesión. Revisa el email y la contraseña.");
     } finally {

@@ -40,7 +40,6 @@ public class Participante {
     private String email;
     @Column(name = "phone_number")
     @Pattern(regexp="\\d{3}-\\d{3}-\\d{3}")
-    @NotBlank(message = "debe tener nº de teléfono")
     private String phoneNumber;
     @Column(name = "birth_date")
     @Past
@@ -72,3 +71,4 @@ public class Participante {
     @JsonIgnore
     private Usuario usuario;
 }
+

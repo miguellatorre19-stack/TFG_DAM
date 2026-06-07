@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
-import { getUser } from "@/services/authService";
+import { canAccessAdminPanel, getUser } from "@/services/authService";
 import type { LoginResponse } from "@/types/auth";
 
 const modules = [
@@ -35,6 +35,12 @@ const modules = [
     description: "Personal profesional y perfiles internos de la entidad.",
     href: "/trabajadores",
   },
+  {
+    title: "Inscripciones",
+    description:
+      "Seguimiento y gestion administrativa de solicitudes a actividades y servicios.",
+    href: "/inscripciones",
+  },
 ];
 
 export default function DashboardPage() {
@@ -48,6 +54,12 @@ useEffect(() => {
 
     if (!currentUser) {
       router.push("/login");
+      setUser(null);
+      return;
+    }
+
+    if (!canAccessAdminPanel(currentUser)) {
+      router.push("/area-privada");
       setUser(null);
       return;
     }
