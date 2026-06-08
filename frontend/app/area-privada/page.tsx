@@ -20,6 +20,7 @@ interface SelectedItem {
   date?: string;
   duration?: number;
   capacity?: number;
+  canJoin?: boolean;
 }
 
 interface LocalRequest {
@@ -456,6 +457,7 @@ export default function PrivateAreaPage() {
                 date: actividad.dayActivity,
                 duration: actividad.duration,
                 capacity: actividad.capacity,
+                canJoin: actividad.canJoin,
               }))}
               onStart={startWizard}
               canStart={hasParticipantAccess}
@@ -595,7 +597,8 @@ function ContentList({
   canStart: boolean;
   blockedMessage: string;
 }) {
-  const actionText = kind === "actividad" ? "Iniciar inscripcion" : "Solicitar servicio";
+  const defaultActionText =
+    kind === "actividad" ? "Iniciar inscripcion" : "Solicitar servicio";
 
   return (
     <section className="rounded-3xl border border-[#d8d1c2] bg-[#fffdf7] p-6 shadow-sm">
@@ -657,11 +660,18 @@ function ContentList({
             <button
               type="button"
               onClick={() => onStart(item)}
-              disabled={!canStart}
+              disabled={!canStart || (item.kind === "actividad" && item.canJoin === false)}
               className="mt-5 w-full rounded-2xl bg-[#23675b] px-5 py-3 font-bold text-white hover:bg-[#1c554b] disabled:cursor-not-allowed disabled:bg-[#9bb7af]"
             >
-              {actionText}
+              {item.kind === "actividad" && item.canJoin === false
+                ? "Inscripcion cerrada"
+                : defaultActionText}
             </button>
+            {item.kind === "actividad" && item.canJoin === false && (
+              <p className="mt-3 text-sm text-[#703729]">
+                Esta actividad esta visible, pero no admite nuevas inscripciones.
+              </p>
+            )}
           </article>
         ))}
       </div>

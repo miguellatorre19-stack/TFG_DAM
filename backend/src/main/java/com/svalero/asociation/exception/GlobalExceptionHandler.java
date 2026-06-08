@@ -95,8 +95,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ErrorResponse> handleBadRequestManual(BusinessRuleException ex) {
-        ErrorResponse error =  ErrorResponse.generalError(409, ex.getMessage(), "Ya hay un usuario con esas credenciales");
-        return new ResponseEntity<>(error, HttpStatus.METHOD_NOT_ALLOWED);
+        ErrorResponse error = ErrorResponse.generalError(409, ex.getMessage(), "Conflict");
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

@@ -42,6 +42,16 @@ public class InscripcionActividadService {
 
         Actividad actividad = actividadRepository.findById(actividadId)
                 .orElseThrow(() -> new ActividadNotFoundException("Actividad con ID:" + actividadId + " no encontrada"));
+
+        if (!Boolean.TRUE.equals(actividad.getCanJoin())) {
+            throw new BusinessRuleException("La actividad no admite nuevas inscripciones");
+        }
+
+        if (actividad.getCapacity() != null
+                && inscripcionActividadRepository.countByActividadId(actividadId) >= actividad.getCapacity()) {
+            throw new BusinessRuleException("No quedan plazas disponibles para esta actividad");
+        }
+
         Participante participante = participanteRepository.findById(participanteId)
                 .orElseThrow(() -> new ParticipanteNotFoundException("Participante con ID:" + participanteId + " no encontrado"));
 

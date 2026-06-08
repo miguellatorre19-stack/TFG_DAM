@@ -15,6 +15,12 @@ import {
 import type { IssuedAccessCredentials } from "@/types/access";
 import type { Socio } from "@/types/socio";
 
+function getLocalDateInputValue(): string {
+  const now = new Date();
+  const timezoneOffsetMs = now.getTimezoneOffset() * 60 * 1000;
+  return new Date(now.getTime() - timezoneOffsetMs).toISOString().slice(0, 10);
+}
+
 function createEmptyForm(): SocioFormData {
   return {
     name: "",
@@ -24,7 +30,7 @@ function createEmptyForm(): SocioFormData {
     dni: "",
     active: true,
     familyModel: "",
-    entryDate: new Date().toISOString().slice(0, 10),
+    entryDate: getLocalDateInputValue(),
   };
 }
 
@@ -102,7 +108,7 @@ export default function SociosPage() {
       dni: socio.dni ?? "",
       active: socio.active ?? true,
       familyModel: socio.familyModel ?? "",
-      entryDate: socio.entryDate ?? new Date().toISOString().slice(0, 10),
+      entryDate: socio.entryDate ?? getLocalDateInputValue(),
     });
 
     window.scrollTo({ top: 0, behavior: "smooth" });

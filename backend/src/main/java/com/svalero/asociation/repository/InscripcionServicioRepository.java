@@ -11,6 +11,7 @@ import java.util.Optional;
 public interface InscripcionServicioRepository extends CrudRepository<InscripcionServicio, Long> {
     boolean existsByServicioIdAndParticipanteId(long servicioId, long participanteId);
     boolean existsByParticipanteId(long participanteId);
+    long countByServicioId(long servicioId);
 
     List<InscripcionServicio> findByServicioId(long servicioId);
 

@@ -12,6 +12,7 @@ export interface SocioAccessResponse extends IssuedAccessCredentials {
 
 export interface ParticipanteAccessResponse extends IssuedAccessCredentials {
   participante: {
+    id: number;
     socioID: number;
   };
 }

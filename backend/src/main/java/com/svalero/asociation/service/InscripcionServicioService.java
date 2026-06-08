@@ -42,6 +42,12 @@ public class InscripcionServicioService {
 
         Servicio servicio = servicioRepository.findById(servicioId)
                 .orElseThrow(() -> new ServicioNotFoundException("Servicio con ID:" + servicioId + " no encontrado"));
+
+        if (servicio.getCapacity() != null
+                && inscripcionServicioRepository.countByServicioId(servicioId) >= servicio.getCapacity()) {
+            throw new BusinessRuleException("No quedan plazas disponibles para este servicio");
+        }
+
         Participante participante = participanteRepository.findById(participanteId)
                 .orElseThrow(() -> new ParticipanteNotFoundException("Participante con ID:" + participanteId + " no encontrado"));
 

@@ -213,7 +213,7 @@ export default function InscripcionesPage() {
     <main className="min-h-screen bg-slate-100">
       <AppNav />
 
-      <section className="mx-auto max-w-6xl px-6 py-8">
+      <section className="mx-auto max-w-7xl px-6 py-8">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-slate-900">Inscripciones</h2>
           <p className="mt-2 text-slate-600">
@@ -227,8 +227,8 @@ export default function InscripcionesPage() {
           </p>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <section className="rounded-2xl bg-white p-6 shadow">
+        <div className="grid gap-6 xl:grid-cols-2">
+          <section className="min-w-0 rounded-2xl bg-white p-6 shadow">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold text-slate-900">Inscripciones a actividades</h3>
@@ -326,7 +326,7 @@ export default function InscripcionesPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl bg-white p-6 shadow">
+          <section className="min-w-0 rounded-2xl bg-white p-6 shadow">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold text-slate-900">Inscripciones a servicios</h3>

@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ParticipanteAccessResponseDto {
-    private ParticipanteDto participante;
+    private ParticipanteOutDto participante;
     private Long usuarioId;
     private String email;
     private String initialPassword;

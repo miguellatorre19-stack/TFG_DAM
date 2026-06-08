@@ -120,7 +120,7 @@ class ParticipanteControllerTest {
     @Test
     void addParticipanteDtoReturns201() throws Exception {
         ParticipanteDto requestDto = buildParticipanteDto("77777777U", "Alberto", 33L);
-        ParticipanteDto mappedResponse = buildParticipanteDto("77777777U", "Alberto", 1L);
+        ParticipanteOutDto mappedResponse = buildParticipanteOutDto(1L, "77777777U", "Alberto", 1L);
         ParticipanteAccessResponseDto accessResponse = new ParticipanteAccessResponseDto(
                 mappedResponse,
                 20L,

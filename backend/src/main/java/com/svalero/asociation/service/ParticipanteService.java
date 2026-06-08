@@ -94,7 +94,7 @@ public class ParticipanteService {
         Participante savedParticipante = participanteRepository.save(participante);
 
         return new ParticipanteAccessResponseDto(
-                toDto(savedParticipante),
+                toOutDto(savedParticipante),
                 savedUsuario.getId(),
                 savedUsuario.getEmail(),
                 credentials.getInitialPassword()

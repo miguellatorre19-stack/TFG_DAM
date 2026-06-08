@@ -12,10 +12,16 @@ import {
 } from "@/services/actividadService";
 import type { Actividad } from "@/types/actividad";
 
+function getLocalDateInputValue(): string {
+  const now = new Date();
+  const timezoneOffsetMs = now.getTimezoneOffset() * 60 * 1000;
+  return new Date(now.getTime() - timezoneOffsetMs).toISOString().slice(0, 10);
+}
+
 function createEmptyForm(): ActividadFormData {
   return {
     description: "",
-    dayActivity: new Date().toISOString().slice(0, 10),
+    dayActivity: getLocalDateInputValue(),
     typeActivity: "",
     duration: 1,
     canJoin: true,
@@ -88,7 +94,7 @@ export default function ActividadesPage() {
     setError("");
     setFormData({
       description: actividad.description ?? "",
-      dayActivity: actividad.dayActivity ?? new Date().toISOString().slice(0, 10),
+      dayActivity: actividad.dayActivity ?? getLocalDateInputValue(),
       typeActivity: actividad.typeActivity ?? "",
       duration: actividad.duration ?? 1,
       canJoin: actividad.canJoin ?? true,

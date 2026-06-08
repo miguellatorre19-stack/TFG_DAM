@@ -11,6 +11,7 @@ import java.util.Optional;
 public interface InscripcionActividadRepository extends CrudRepository<InscripcionActividad, Long> {
     boolean existsByActividadIdAndParticipanteId(long actividadId, long participanteId);
     boolean existsByParticipanteId(long participanteId);
+    long countByActividadId(long actividadId);
     List<InscripcionActividad> findByActividadId(long actividadId);
     Optional<InscripcionActividad> findByIdAndActividadId(long id, long actividadId);
     void deleteByIdAndActividadId(long id, long actividadId);
