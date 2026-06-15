@@ -31,8 +31,11 @@ public class TrabajadorController {
     public ResponseEntity<List<TrabajadorOutDto>> getAll(
             @RequestParam(value = "entryDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate entryDate,
             @RequestParam(value = "name", required = false) String name,
-            @RequestParam(value = "contractType", required = false) String contractType){
-        List<TrabajadorOutDto> alltrabajadores = trabajadorService.findAllDto(entryDate, name, contractType);
+            @RequestParam(value = "contractType", required = false) String contractType,
+            @RequestParam(value = "active", required = false) Boolean active){
+        List<TrabajadorOutDto> alltrabajadores = active == null
+                ? trabajadorService.findAllDto(entryDate, name, contractType)
+                : trabajadorService.findAllDto(entryDate, name, contractType, active);
         logger.info("GET/trabajadores");
         return ResponseEntity.ok(alltrabajadores);
     }

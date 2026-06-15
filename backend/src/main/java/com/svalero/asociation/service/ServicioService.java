@@ -25,18 +25,28 @@ public class ServicioService {
     private final Logger logger = LoggerFactory.getLogger(ServicioService.class);
 
 
-    public List<Servicio> findAll(String periodicity, Integer capacity, Float duration){
-        List<Servicio> servicios = servicioRepository.findByFilters(periodicity, capacity, duration);
-        logger.info("Searching with filters: {} {} {}", periodicity, capacity, duration);
+    public List<Servicio> findAll(String periodicity, Integer capacity, Float duration, Boolean archived){
+        List<Servicio> servicios = archived == null
+                ? servicioRepository.findByFilters(periodicity, capacity, duration)
+                : servicioRepository.findByFilters(periodicity, capacity, duration, archived);
+        logger.info("Searching with filters: {} {} {} {}", periodicity, capacity, duration, archived);
         return servicios;
     }
 
-    public List<ServicioOutDto> findAllDto(String periodicity, Integer capacity, Float duration){
-        List<Servicio> servicios = findAll(periodicity, capacity, duration);
+    public List<Servicio> findAll(String periodicity, Integer capacity, Float duration){
+        return findAll(periodicity, capacity, duration, null);
+    }
+
+    public List<ServicioOutDto> findAllDto(String periodicity, Integer capacity, Float duration, Boolean archived){
+        List<Servicio> servicios = findAll(periodicity, capacity, duration, archived);
 
         return servicios.stream()
                 .map(this::toOutDto)
                 .toList();
+    }
+
+    public List<ServicioOutDto> findAllDto(String periodicity, Integer capacity, Float duration){
+        return findAllDto(periodicity, capacity, duration, null);
     }
 
     private ServicioOutDto toOutDto(Servicio servicio) {

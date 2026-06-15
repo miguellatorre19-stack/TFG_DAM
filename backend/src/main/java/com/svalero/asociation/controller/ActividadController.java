@@ -36,9 +36,12 @@ public class ActividadController {
     public ResponseEntity<List<ActividadOutDto>> getAllv1(
             @RequestParam(value = "dayActivity", required = false) @DateTimeFormat (iso = DateTimeFormat.ISO.DATE) LocalDate dayActivity,
             @RequestParam(value = "canJoin", required = false) Boolean canJoin,
-            @RequestParam(value = "duration", required = false) Float duration){
+            @RequestParam(value = "duration", required = false) Float duration,
+            @RequestParam(value = "archived", required = false) Boolean archived){
         logger.info("GET/actividades");
-        List<ActividadOutDto> allactividades = actividadService.findAll(dayActivity, canJoin, duration);
+        List<ActividadOutDto> allactividades = archived == null
+                ? actividadService.findAll(dayActivity, canJoin, duration)
+                : actividadService.findAll(dayActivity, canJoin, duration, archived);
         return ResponseEntity.ok(allactividades);
     }
 

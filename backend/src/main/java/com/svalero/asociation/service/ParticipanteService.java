@@ -43,12 +43,18 @@ public class ParticipanteService {
 
     private final Logger logger = LoggerFactory.getLogger(ParticipanteService.class);
 
-    public List<ParticipanteOutDto> findAll(LocalDate birthDate, String name, String typeRel){
-        List<Participante> participantes = participanteRepository.findByFilters(birthDate, name, typeRel);
-        logger.info("Searching with filters: {} {} {}", birthDate, name, typeRel);
+    public List<ParticipanteOutDto> findAll(LocalDate birthDate, String name, String typeRel, Boolean active){
+        List<Participante> participantes = active == null
+                ? participanteRepository.findByFilters(birthDate, name, typeRel)
+                : participanteRepository.findByFilters(birthDate, name, typeRel, active);
+        logger.info("Searching with filters: {} {} {} {}", birthDate, name, typeRel, active);
         return participantes.stream()
                 .map(this::toOutDto)
                 .toList();
+    }
+
+    public List<ParticipanteOutDto> findAll(LocalDate birthDate, String name, String typeRel){
+        return findAll(birthDate, name, typeRel, null);
     }
 
     public ParticipanteDto findById(long id) {
@@ -182,6 +188,9 @@ public class ParticipanteService {
         dto.setNeeds(participante.getNeeds());
         dto.setTypeRel(participante.getTypeRel());
         dto.setSocioID(participante.getSocio() != null ? participante.getSocio().getId() : 0);
+        dto.setActive(participante.getActive());
+        dto.setReason(participante.getReason());
+        dto.setOutDate(participante.getOutDate());
         return dto;
     }
 }

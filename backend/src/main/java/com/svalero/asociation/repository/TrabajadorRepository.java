@@ -25,8 +25,13 @@ public interface TrabajadorRepository extends CrudRepository<Trabajador, Long> {
             "(:entryDate IS NULL OR s.entryDate >= :entryDate) AND " +
             "(:name IS NULL OR s.name = :name) AND " +
             "(:contractType IS NULL OR s.contractType = :contractType) AND " +
-            "COALESCE(s.active, true) = true")
+            "((:active IS NULL AND COALESCE(s.active, true) = true) OR (:active IS NOT NULL AND COALESCE(s.active, true) = :active))")
     List<Trabajador> findByFilters(@Param("entryDate") LocalDate entryDate,
                                  @Param("name") String name,
-                                 @Param("contractType") String contractType);
+                                 @Param("contractType") String contractType,
+                                 @Param("active") Boolean active);
+
+    default List<Trabajador> findByFilters(LocalDate entryDate, String name, String contractType) {
+        return findByFilters(entryDate, name, contractType, null);
+    }
 }

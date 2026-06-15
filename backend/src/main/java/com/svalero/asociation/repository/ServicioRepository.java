@@ -19,8 +19,13 @@ public interface ServicioRepository extends CrudRepository<Servicio, Long>{
             "(:periodicity IS NULL OR s.periodicity = :periodicity) AND " +
             "(:capacity IS NULL OR s.capacity = :capacity) AND " +
             "(:duration IS NULL OR s.duration = :duration) AND " +
-            "COALESCE(s.status, 'ACTIVE') <> 'ARCHIVED'")
+            "((:archived IS NULL AND COALESCE(s.status, 'ACTIVE') <> 'ARCHIVED') OR (:archived = true AND COALESCE(s.status, 'ACTIVE') = 'ARCHIVED') OR (:archived = false AND COALESCE(s.status, 'ACTIVE') <> 'ARCHIVED'))")
     List<Servicio> findByFilters(@Param("periodicity") String periodicity,
                                   @Param("capacity") Integer capacity,
-                                  @Param("duration") Float duration);
+                                  @Param("duration") Float duration,
+                                  @Param("archived") Boolean archived);
+
+    default List<Servicio> findByFilters(String periodicity, Integer capacity, Float duration) {
+        return findByFilters(periodicity, capacity, duration, null);
+    }
 }

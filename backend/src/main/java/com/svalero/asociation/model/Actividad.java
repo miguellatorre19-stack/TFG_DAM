@@ -26,7 +26,6 @@ public class Actividad {
     private String description;
     @Column(name = "day_activity")
     @NotNull(message = "necesita una una fecha")
-    @FutureOrPresent
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dayActivity;
     @Column (name = "type_activity")

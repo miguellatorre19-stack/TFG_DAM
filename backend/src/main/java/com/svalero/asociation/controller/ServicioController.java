@@ -33,8 +33,11 @@ public class ServicioController {
     public ResponseEntity<List<ServicioOutDto>> getAll(
             @RequestParam(value = "periodicity", required = false)String periodicity,
             @RequestParam(value="capacity", required = false) Integer capacity,
-            @RequestParam(value="duration", required = false) Float duration ){
-        List<ServicioOutDto> allservicios = servicioService.findAllDto(periodicity, capacity, duration);
+            @RequestParam(value="duration", required = false) Float duration,
+            @RequestParam(value="archived", required = false) Boolean archived ){
+        List<ServicioOutDto> allservicios = archived == null
+                ? servicioService.findAllDto(periodicity, capacity, duration)
+                : servicioService.findAllDto(periodicity, capacity, duration, archived);
         logger.info("GET/servicios");
         return ResponseEntity.ok(allservicios);
     }

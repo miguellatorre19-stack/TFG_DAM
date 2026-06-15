@@ -40,9 +40,12 @@ public class ParticipanteController {
     public ResponseEntity<List<ParticipanteOutDto>> getAll(
             @RequestParam(value = "birthDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate birthDate,
             @RequestParam(value = "name", required = false) String name,
-            @RequestParam(value = "typeRel",required = false) String typeRel)
+            @RequestParam(value = "typeRel",required = false) String typeRel,
+            @RequestParam(value = "active", required = false) Boolean active)
     {
-        List<ParticipanteOutDto> allparticipantes = participanteService.findAll(birthDate, name, typeRel);
+        List<ParticipanteOutDto> allparticipantes = active == null
+                ? participanteService.findAll(birthDate, name, typeRel)
+                : participanteService.findAll(birthDate, name, typeRel, active);
 
         logger.info("GET/participantes");
         return ResponseEntity.ok(allparticipantes);

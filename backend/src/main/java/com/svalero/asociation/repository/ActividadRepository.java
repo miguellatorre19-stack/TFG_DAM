@@ -23,8 +23,13 @@ public interface ActividadRepository extends CrudRepository<Actividad, Long> {
             "(:dayActivity IS NULL OR s.dayActivity = :dayActivity) AND " +
             "(:canJoin IS NULL OR s.canJoin = :canJoin) AND " +
             "(:duration IS NULL OR s.duration = :duration) AND " +
-            "COALESCE(s.status, 'ACTIVE') <> 'ARCHIVED'")
+            "((:archived IS NULL AND COALESCE(s.status, 'ACTIVE') <> 'ARCHIVED') OR (:archived = true AND COALESCE(s.status, 'ACTIVE') = 'ARCHIVED') OR (:archived = false AND COALESCE(s.status, 'ACTIVE') <> 'ARCHIVED'))")
     List<Actividad> findByFilters(@Param("dayActivity") LocalDate dayActivity,
                                  @Param("canJoin") Boolean canJoin,
-                                 @Param("duration") Float duration);
+                                 @Param("duration") Float duration,
+                                 @Param("archived") Boolean archived);
+
+    default List<Actividad> findByFilters(LocalDate dayActivity, Boolean canJoin, Float duration) {
+        return findByFilters(dayActivity, canJoin, duration, null);
+    }
 }

@@ -36,17 +36,27 @@ public class TrabajadorService {
 
     private final Logger logger = LoggerFactory.getLogger(TrabajadorService.class);
 
-    public List<Trabajador> findAll(LocalDate entryDate, String name, String contractType){
-        List<Trabajador> trabajadores = trabajadorRepository.findByFilters(entryDate, name, contractType);
-        logger.info("Searching Trabajador with filters: {} {} {}", entryDate, name, contractType);
+    public List<Trabajador> findAll(LocalDate entryDate, String name, String contractType, Boolean active){
+        List<Trabajador> trabajadores = active == null
+                ? trabajadorRepository.findByFilters(entryDate, name, contractType)
+                : trabajadorRepository.findByFilters(entryDate, name, contractType, active);
+        logger.info("Searching Trabajador with filters: {} {} {} {}", entryDate, name, contractType, active);
         return trabajadores;
     }
 
-    public List<TrabajadorOutDto> findAllDto(LocalDate entryDate, String name, String contractType){
-        List<Trabajador> trabajadores = findAll(entryDate, name, contractType);
+    public List<Trabajador> findAll(LocalDate entryDate, String name, String contractType){
+        return findAll(entryDate, name, contractType, null);
+    }
+
+    public List<TrabajadorOutDto> findAllDto(LocalDate entryDate, String name, String contractType, Boolean active){
+        List<Trabajador> trabajadores = findAll(entryDate, name, contractType, active);
         return trabajadores.stream()
                 .map(this::toOutDto)
                 .toList();
+    }
+
+    public List<TrabajadorOutDto> findAllDto(LocalDate entryDate, String name, String contractType){
+        return findAllDto(entryDate, name, contractType, null);
     }
 
     public Trabajador findById(long id) {

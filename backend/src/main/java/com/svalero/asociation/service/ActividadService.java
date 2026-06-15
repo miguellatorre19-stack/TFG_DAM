@@ -24,13 +24,19 @@ public class ActividadService {
 
     private final Logger logger = LoggerFactory.getLogger(ActividadService.class);
 
-    public List<ActividadOutDto> findAll(LocalDate dayActivity, Boolean canJoin, Float duration) {
-        List<Actividad> actividades = actividadRepository.findByFilters(dayActivity, canJoin, duration);
-        logger.info("Searching Actividad with filters: {} {} {}", dayActivity, canJoin, duration);
+    public List<ActividadOutDto> findAll(LocalDate dayActivity, Boolean canJoin, Float duration, Boolean archived) {
+        List<Actividad> actividades = archived == null
+                ? actividadRepository.findByFilters(dayActivity, canJoin, duration)
+                : actividadRepository.findByFilters(dayActivity, canJoin, duration, archived);
+        logger.info("Searching Actividad with filters: {} {} {} {}", dayActivity, canJoin, duration, archived);
 
         return actividades.stream()
                 .map(this::toOutDto)
                 .toList();
+    }
+
+    public List<ActividadOutDto> findAll(LocalDate dayActivity, Boolean canJoin, Float duration) {
+        return findAll(dayActivity, canJoin, duration, null);
     }
 
     private ActividadOutDto toOutDto(Actividad actividad) {
@@ -84,8 +90,4 @@ public class ActividadService {
         actividadRepository.save(actividad);
         logger.info("Actividad with ID: {} archived successfully", id);
     }
-
-
-
-
 }
