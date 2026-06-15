@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMe, getUser, logout } from "@/services/authService";
 import { getActividades, inscribirActividad } from "@/services/actividadService";
-import { getServicios, inscribirServicio } from "@/services/servicioService";
+import { getServicios, solicitarServicio } from "@/services/servicioService";
 import type { LoginResponse, MeResponse } from "@/types/auth";
 import type { Actividad } from "@/types/actividad";
 import type { Servicio } from "@/types/servicio";
@@ -235,7 +235,7 @@ export default function PrivateAreaPage() {
       if (selectedItem.kind === "actividad") {
         await inscribirActividad(selectedItem.id, parsedParticipantId);
       } else {
-        await inscribirServicio(selectedItem.id, parsedParticipantId);
+        await solicitarServicio(selectedItem.id, parsedParticipantId);
       }
 
       const request: LocalRequest = {

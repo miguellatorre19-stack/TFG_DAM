@@ -6,7 +6,6 @@ import com.svalero.asociation.dto.AccessCodeResponseDto;
 import com.svalero.asociation.dto.ParticipanteAccessResponseDto;
 import com.svalero.asociation.dto.ParticipanteDto;
 import com.svalero.asociation.dto.ParticipanteOutDto;
-import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.exception.BusinessRuleException;
 import com.svalero.asociation.exception.ParticipanteNotFoundException;
 import com.svalero.asociation.exception.SocioNotFoundException;
@@ -14,10 +13,9 @@ import com.svalero.asociation.model.Participante;
 import com.svalero.asociation.model.Usuario;
 import com.svalero.asociation.repository.ParticipanteRepository;
 import com.svalero.asociation.repository.InscripcionActividadRepository;
-import com.svalero.asociation.repository.InscripcionServicioRepository;
+import com.svalero.asociation.repository.SolicitudServicioRepository;
 import com.svalero.asociation.repository.SocioRepository;
 import org.modelmapper.ModelMapper;
-import org.modelmapper.TypeToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +35,7 @@ public class ParticipanteService {
     @Autowired
     private InscripcionActividadRepository inscripcionActividadRepository;
     @Autowired
-    private InscripcionServicioRepository inscripcionServicioRepository;
+    private SolicitudServicioRepository solicitudServicioRepository;
     @Autowired
     private ModelMapper modelMapper;
     @Autowired
@@ -147,17 +145,15 @@ public class ParticipanteService {
     public void delete(long id) {
         Participante participante = participanteRepository.findById(id).orElseThrow(() -> new ParticipanteNotFoundException("Participante con ID:" + id + "no encontrado"));
 
-        if (inscripcionActividadRepository.existsByParticipanteId(id)) {
-            inscripcionActividadRepository.deleteByParticipanteId(id);
+        if (Boolean.FALSE.equals(participante.getActive())) {
+            throw new BusinessRuleException("El participante con ID " + id + " ya fue dado de baja");
         }
 
-        if (inscripcionServicioRepository.existsByParticipanteId(id)) {
-            inscripcionServicioRepository.deleteByParticipanteId(id);
-        }
-
-        participanteRepository.delete(participante);
-        accessUserService.deleteAccessUser(participante.getUsuario());
-        logger.info("Participante with ID: {} deleted successfully", id);
+        participante.setActive(false);
+        participante.setOutDate(LocalDate.now());
+        participanteRepository.save(participante);
+        accessUserService.deactivateAccessUser(participante.getUsuario());
+        logger.info("Participante with ID: {} marked as inactive", id);
     }
 
     private ParticipanteDto toDto(Participante participante) {

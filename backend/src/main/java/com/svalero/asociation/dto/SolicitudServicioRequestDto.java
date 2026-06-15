@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class InscripcionServicioRequestDto {
+public class SolicitudServicioRequestDto {
     @NotNull(message = "necesita un precio")
     private float price;
     @NotBlank(message = "necesita un estado")

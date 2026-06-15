@@ -171,11 +171,19 @@ public class TrabajadorService {
         );
     }
 
+    @Transactional
     public void delete(long id) {
         Trabajador trabajador = trabajadorRepository.findById(id).orElseThrow(()-> new TrabajadorNotFoundException("Trabajador con la ID:"+ id+ "no encontrado"));
 
-        logger.info("Deleted Trabajador with ID: {} ", id);
-        trabajadorRepository.delete(trabajador);
+        if (Boolean.FALSE.equals(trabajador.getActive())) {
+            throw new BusinessRuleException("El trabajador con ID " + id + " ya fue dado de baja");
+        }
+
+        trabajador.setActive(false);
+        trabajador.setOutDate(LocalDate.now());
+        trabajadorRepository.save(trabajador);
+        accessUserService.deactivateAccessUser(trabajador.getUsuario());
+        logger.info("Trabajador with ID: {} marked as inactive", id);
     }
 
     private TrabajadorOutDto toOutDto(Trabajador trabajador) {
@@ -189,6 +197,8 @@ public class TrabajadorService {
         dto.setBirthDate(trabajador.getBirthDate());
         dto.setEntryDate(trabajador.getEntryDate());
         dto.setContractType(trabajador.getContractType());
+        dto.setActive(trabajador.getActive());
+        dto.setOutDate(trabajador.getOutDate());
         dto.setServicioOutDto(toServicioOutDto(trabajador.getServicios()));
         return dto;
     }
@@ -205,6 +215,7 @@ public class TrabajadorService {
         dto.setRequisites(servicio.getRequisites());
         dto.setDuration(servicio.getDuration());
         dto.setCapacity(servicio.getCapacity());
+        dto.setStatus(servicio.getStatus());
         dto.setTrabajadoresIds(List.of());
         return dto;
     }

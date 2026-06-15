@@ -56,16 +56,16 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/v1/servicios/*/inscripciones")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/servicios/*/solicitudes")
                         .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
 
-                        .requestMatchers(HttpMethod.POST, "/api/v1/servicios/*/inscripciones")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/servicios/*/solicitudes")
                         .hasAnyRole("SOCIO", "PARTICIPANTE")
 
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/servicios/*/inscripciones/*")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/servicios/*/solicitudes/*")
                         .denyAll()
 
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/servicios/*/inscripciones/*")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/servicios/*/solicitudes/*")
                         .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/servicios", "/api/v1/servicios/**")

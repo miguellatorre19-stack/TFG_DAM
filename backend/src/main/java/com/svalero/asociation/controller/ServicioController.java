@@ -1,11 +1,11 @@
 package com.svalero.asociation.controller;
 
-import com.svalero.asociation.dto.InscripcionServicioOutDto;
-import com.svalero.asociation.dto.InscripcionServicioRequestDto;
 import com.svalero.asociation.dto.ParticipanteDto;
+import com.svalero.asociation.dto.SolicitudServicioOutDto;
+import com.svalero.asociation.dto.SolicitudServicioRequestDto;
 import com.svalero.asociation.dto.ServicioDto;
 import com.svalero.asociation.dto.ServicioOutDto;
-import com.svalero.asociation.service.InscripcionServicioService;
+import com.svalero.asociation.service.SolicitudServicioService;
 import com.svalero.asociation.service.ServicioService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -24,9 +24,9 @@ public class ServicioController {
     @Autowired
     private ServicioService servicioService;
     @Autowired
-    private InscripcionServicioService inscripcionServicioService;
+    private SolicitudServicioService solicitudServicioService;
 
-    private final Logger logger = LoggerFactory.getLogger(SocioController.class);
+    private final Logger logger = LoggerFactory.getLogger(ServicioController.class);
 
 
     @GetMapping("/v1/servicios")
@@ -57,26 +57,26 @@ public class ServicioController {
         return new ResponseEntity<>(newservicio, HttpStatus.CREATED);
     }
 
-    @PostMapping("/v1/servicios/{id}/inscripciones")
-    public ResponseEntity<Void> inscribirParticipante(@PathVariable long id,
-            @Valid @RequestBody InscripcionServicioRequestDto requestDto) throws MethodArgumentNotValidException {
-        inscripcionServicioService.inscribir(id, requestDto.getParticipanteId(), requestDto.getState(), requestDto.getPrice());
-        logger.info("POST/servicios/{id}/inscripciones");
+    @PostMapping("/v1/servicios/{id}/solicitudes")
+    public ResponseEntity<Void> crearSolicitud(@PathVariable long id,
+            @Valid @RequestBody SolicitudServicioRequestDto requestDto) throws MethodArgumentNotValidException {
+        solicitudServicioService.crearSolicitud(id, requestDto.getParticipanteId(), requestDto.getState(), requestDto.getPrice());
+        logger.info("POST/servicios/{id}/solicitudes");
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
     @GetMapping("/v1/servicios/{id}/participantes")
     public ResponseEntity<List<ParticipanteDto>> getParticipantesByServicio(@PathVariable long id) {
-        List<ParticipanteDto> participantes = inscripcionServicioService.listarParticipantes(id);
+        List<ParticipanteDto> participantes = solicitudServicioService.listarParticipantes(id);
         logger.info("GET/servicios/{id}/participantes");
         return ResponseEntity.ok(participantes);
     }
 
-    @GetMapping("/v1/servicios/{id}/inscripciones")
-    public ResponseEntity<List<InscripcionServicioOutDto>> getInscripcionesByServicio(@PathVariable long id) {
-        List<InscripcionServicioOutDto> inscripciones = inscripcionServicioService.listarInscripciones(id);
-        logger.info("GET/servicios/{id}/inscripciones");
-        return ResponseEntity.ok(inscripciones);
+    @GetMapping("/v1/servicios/{id}/solicitudes")
+    public ResponseEntity<List<SolicitudServicioOutDto>> getSolicitudesByServicio(@PathVariable long id) {
+        List<SolicitudServicioOutDto> solicitudes = solicitudServicioService.listarSolicitudes(id);
+        logger.info("GET/servicios/{id}/solicitudes");
+        return ResponseEntity.ok(solicitudes);
     }
 
     @PutMapping("/v1/servicios/{id}")
@@ -86,19 +86,19 @@ public class ServicioController {
         return ResponseEntity.ok(updatedservicio);
     }
 
-    @PutMapping("/v1/servicios/{idServicio}/inscripciones/{idInscripcion}")
-    public ResponseEntity<InscripcionServicioOutDto> editInscripcion(@PathVariable long idServicio,
-            @PathVariable long idInscripcion, @Valid @RequestBody InscripcionServicioRequestDto requestDto)
+    @PutMapping("/v1/servicios/{idServicio}/solicitudes/{idSolicitud}")
+    public ResponseEntity<SolicitudServicioOutDto> editarSolicitud(@PathVariable long idServicio,
+            @PathVariable long idSolicitud, @Valid @RequestBody SolicitudServicioRequestDto requestDto)
             throws MethodArgumentNotValidException {
-        InscripcionServicioOutDto updatedInscripcion = inscripcionServicioService.modify(
+        SolicitudServicioOutDto updatedSolicitud = solicitudServicioService.modificarSolicitud(
                 idServicio,
-                idInscripcion,
+                idSolicitud,
                 requestDto.getParticipanteId(),
                 requestDto.getState(),
                 requestDto.getPrice()
         );
-        logger.info("PUT/servicios/{idServicio}/inscripciones/{idInscripcion}");
-        return ResponseEntity.ok(updatedInscripcion);
+        logger.info("PUT/servicios/{idServicio}/solicitudes/{idSolicitud}");
+        return ResponseEntity.ok(updatedSolicitud);
     }
 
     @DeleteMapping("/v1/servicios/{id}")
@@ -108,10 +108,10 @@ public class ServicioController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/v1/servicios/{idServicio}/inscripciones/{idInscripcion}")
-    public ResponseEntity<Void> deleteInscripcion(@PathVariable long idServicio, @PathVariable long idInscripcion){
-        inscripcionServicioService.deleteInscripcion(idServicio, idInscripcion);
-        logger.info("DELETE/servicios/{idServicio}/inscripciones/{idInscripcion}");
+    @DeleteMapping("/v1/servicios/{idServicio}/solicitudes/{idSolicitud}")
+    public ResponseEntity<Void> cancelarSolicitud(@PathVariable long idServicio, @PathVariable long idSolicitud){
+        solicitudServicioService.cancelarSolicitud(idServicio, idSolicitud);
+        logger.info("DELETE/servicios/{idServicio}/solicitudes/{idSolicitud}");
         return ResponseEntity.noContent().build();
     }
 

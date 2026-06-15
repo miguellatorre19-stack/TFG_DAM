@@ -9,7 +9,7 @@ import java.time.LocalDate;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class InscripcionServicioOutDto {
+public class SolicitudServicioOutDto {
     private long id;
     private LocalDate createdAt;
     private String state;

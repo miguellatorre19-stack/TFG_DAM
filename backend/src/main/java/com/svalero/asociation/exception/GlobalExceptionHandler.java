@@ -3,7 +3,6 @@ package com.svalero.asociation.exception;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
-import com.svalero.asociation.controller.SocioController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -24,7 +23,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private final Logger logger = LoggerFactory.getLogger(SocioController.class);
+    private final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ResourceNotFoundException.class)//si el .class deja de ser el padre, se produce error 500
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex) {
@@ -94,9 +93,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(BusinessRuleException.class)
-    public ResponseEntity<ErrorResponse> handleBadRequestManual(BusinessRuleException ex) {
-        ErrorResponse error =  ErrorResponse.generalError(409, ex.getMessage(), "Ya hay un usuario con esas credenciales");
-        return new ResponseEntity<>(error, HttpStatus.METHOD_NOT_ALLOWED);
+    public ResponseEntity<ErrorResponse> handleBusinessRule(BusinessRuleException ex) {
+        logger.warn("Business rule violation", ex);
+        ErrorResponse error = ErrorResponse.generalError(409, ex.getMessage(), "Conflict");
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

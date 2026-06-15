@@ -48,6 +48,8 @@ public class Actividad {
     @Column(nullable = true)
     @Embedded
     private Ubicacion place;
+    @Column(nullable = false)
+    private String status = "ACTIVE";
 
     @OneToMany(mappedBy = "actividad")
     private List<InscripcionActividad> inscripciones;
@@ -55,4 +57,11 @@ public class Actividad {
     @OneToMany(mappedBy = "actividad")
     @JsonBackReference(value = "actividad_trabajadores")
     private List<Trabajador> trabajadoresAsignados;
+
+    @PrePersist
+    public void prePersist() {
+        if (status == null || status.isBlank()) {
+            status = "ACTIVE";
+        }
+    }
 }

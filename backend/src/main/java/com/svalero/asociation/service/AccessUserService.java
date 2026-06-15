@@ -59,6 +59,15 @@ public class AccessUserService {
         return new AccessCredentialsDto(usuarioRepository.save(usuario), initialPassword);
     }
 
+    public void deactivateAccessUser(Usuario usuario) {
+        if (usuario == null || usuario.getId() == null) {
+            return;
+        }
+
+        usuario.setActive(false);
+        usuarioRepository.save(usuario);
+    }
+
     public void deleteAccessUser(Usuario usuario) {
         if (usuario == null || usuario.getId() == null) {
             return;

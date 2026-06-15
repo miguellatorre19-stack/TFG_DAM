@@ -18,7 +18,8 @@ public interface ServicioRepository extends CrudRepository<Servicio, Long>{
     @Query("SELECT s FROM servicio s WHERE " +
             "(:periodicity IS NULL OR s.periodicity = :periodicity) AND " +
             "(:capacity IS NULL OR s.capacity = :capacity) AND " +
-            "(:duration IS NULL OR s.duration = :duration)")
+            "(:duration IS NULL OR s.duration = :duration) AND " +
+            "COALESCE(s.status, 'ACTIVE') <> 'ARCHIVED'")
     List<Servicio> findByFilters(@Param("periodicity") String periodicity,
                                   @Param("capacity") Integer capacity,
                                   @Param("duration") Float duration);

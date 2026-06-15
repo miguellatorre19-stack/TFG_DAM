@@ -137,10 +137,33 @@ public class SocioService {
         );
     }
 
+    @Transactional
     public void delete(long id) {
-        logger.info("Socio with ID: {} deleted successfully", id);
-        Socio socio = socioRepository.findById(id).orElseThrow(() -> new SocioNotFoundException("Socio con ID " + id + " no encontrado"));
-        socioRepository.delete(socio);
+        Socio socio = socioRepository.findById(id)
+                .orElseThrow(() -> new SocioNotFoundException("Socio con ID " + id + " no encontrado"));
+
+        if (Boolean.FALSE.equals(socio.getActive())) {
+            throw new BusinessRuleException("El socio con ID " + id + " ya fue dado de baja");
+        }
+
+        LocalDate outDate = LocalDate.now();
+        socio.setActive(false);
+        socio.setOutDate(outDate);
+        accessUserService.deactivateAccessUser(socio.getUsuario());
+
+        if (socio.getParticipanteList() != null) {
+            socio.getParticipanteList().forEach(participante -> {
+                participante.setActive(false);
+                participante.setOutDate(outDate);
+                if (participante.getReason() == null || participante.getReason().isBlank()) {
+                    participante.setReason("Socio dado de baja");
+                }
+                accessUserService.deactivateAccessUser(participante.getUsuario());
+            });
+        }
+
+        socioRepository.save(socio);
+        logger.info("Socio with ID: {} marked as inactive", id);
     }
 
 }

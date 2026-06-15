@@ -5,14 +5,12 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
 @Entity(name = "servicio")
 @Table(name = "servicio")
@@ -35,10 +33,19 @@ public class Servicio {
     @Positive
     @NotNull(message = "necesita una capacidad")
     private Integer capacity;
+    @Column(nullable = false)
+    private String status = "ACTIVE";
 
     @OneToMany(mappedBy = "servicios")
     @JsonBackReference(value = "servicio_trabajadores")
     private List<Trabajador> trabajadoresAsignados;
+
+    @PrePersist
+    public void prePersist() {
+        if (status == null || status.isBlank()) {
+            status = "ACTIVE";
+        }
+    }
 
     public Servicio(long id, String description, String periodicity, String requisites, Float duration, Integer capacity,
             List<Participante> ignoredParticipantesInscritos, List<Trabajador> trabajadoresAsignados) {
@@ -48,6 +55,7 @@ public class Servicio {
         this.requisites = requisites;
         this.duration = duration;
         this.capacity = capacity;
+        this.status = "ACTIVE";
         this.trabajadoresAsignados = trabajadoresAsignados;
     }
 

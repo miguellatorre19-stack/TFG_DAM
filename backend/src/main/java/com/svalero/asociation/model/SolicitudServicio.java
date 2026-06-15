@@ -18,7 +18,7 @@ import java.time.LocalDate;
         )
 )
 @Entity(name = "inscripcion_servicio")
-public class InscripcionServicio {
+public class SolicitudServicio {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
@@ -38,7 +38,7 @@ public class InscripcionServicio {
             createdAt = LocalDate.now();
         }
         if (state == null || state.isBlank()) {
-            state = "ACTIVE";
+            state = "PENDING";
         }
     }
 

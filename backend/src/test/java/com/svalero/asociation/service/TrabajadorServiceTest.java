@@ -257,12 +257,19 @@ public class TrabajadorServiceTest{
     @Test
     void testDelete() {
         Trabajador trabajador =   new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now(), LocalDate.now(), "Tiempo Parcial", null, null);
+        Usuario usuario = Usuario.builder().id(12L).email("email@email").active(true).build();
+        trabajador.setUsuario(usuario);
 
         when(trabajadorRepository.findById(trabajador.getId())).thenReturn(Optional.of(trabajador));
+        when(trabajadorRepository.save(trabajador)).thenReturn(trabajador);
 
         trabajadorService.delete(trabajador.getId());
 
-        verify(trabajadorRepository, times(1)).delete(trabajador);
+        assertFalse(trabajador.getActive());
+        assertNotNull(trabajador.getOutDate());
+        verify(trabajadorRepository, times(1)).save(trabajador);
+        verify(accessUserService).deactivateAccessUser(usuario);
+        verify(trabajadorRepository, never()).delete(trabajador);
     }
 
 }

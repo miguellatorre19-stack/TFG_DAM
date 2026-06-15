@@ -12,7 +12,7 @@ export interface InscripcionActividad {
   participanteId: number;
 }
 
-export interface InscripcionServicio {
+export interface SolicitudServicio {
   id: number;
   createdAt?: string;
   state?: string;

@@ -43,6 +43,7 @@ public class ActividadService {
         dto.setDuration(actividad.getDuration());
         dto.setCanJoin(actividad.getCanJoin());
         dto.setCapacity(actividad.getCapacity());
+        dto.setStatus(actividad.getStatus());
 
         return dto;
     }
@@ -74,8 +75,14 @@ public class ActividadService {
 
     public void delete(long id) {
         Actividad actividad = actividadRepository.findById(id).orElseThrow(() -> new ActividadNotFoundException("Actividad con ID:" + id + "not found"));
-        logger.info("Socio with ID: {} deleted successfully", id);
-        actividadRepository.delete(actividad);
+
+        if ("ARCHIVED".equalsIgnoreCase(actividad.getStatus())) {
+            throw new com.svalero.asociation.exception.BusinessRuleException("La actividad con ID " + id + " ya fue archivada");
+        }
+
+        actividad.setStatus("ARCHIVED");
+        actividadRepository.save(actividad);
+        logger.info("Actividad with ID: {} archived successfully", id);
     }
 
 

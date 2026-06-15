@@ -185,11 +185,14 @@ class ActividadServiceTest {
     void testDelete() {
         Actividad actividad = buildActividad(1L, "Club de lectura");
         when(actividadRepository.findById(1L)).thenReturn(Optional.of(actividad));
+        when(actividadRepository.save(actividad)).thenReturn(actividad);
 
         actividadService.delete(1L);
 
         verify(actividadRepository).findById(1L);
-        verify(actividadRepository).delete(actividad);
+        assertEquals("ARCHIVED", actividad.getStatus());
+        verify(actividadRepository).save(actividad);
+        verify(actividadRepository, never()).delete(actividad);
     }
 
     @Test
@@ -199,7 +202,7 @@ class ActividadServiceTest {
         assertThrows(ActividadNotFoundException.class, () -> actividadService.delete(200L));
 
         verify(actividadRepository).findById(200L);
-        verify(actividadRepository, never()).delete(any(Actividad.class));
+        verify(actividadRepository, never()).save(any(Actividad.class));
     }
 
     private Actividad buildActividad(long id, String description) {
@@ -211,6 +214,7 @@ class ActividadServiceTest {
         actividad.setDuration(40f);
         actividad.setCanJoin(true);
         actividad.setCapacity(10);
+        actividad.setStatus("ACTIVE");
         return actividad;
     }
 

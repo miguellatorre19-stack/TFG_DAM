@@ -4,12 +4,11 @@ import com.svalero.asociation.dto.AccessCredentialsDto;
 import com.svalero.asociation.dto.AccessCodeResponseDto;
 import com.svalero.asociation.dto.SocioAccessResponseDto;
 import com.svalero.asociation.dto.SocioDto;
-import com.svalero.asociation.model.Rol;
+import com.svalero.asociation.exception.BusinessRuleException;
+import com.svalero.asociation.model.Participante;
 import com.svalero.asociation.model.Socio;
 import com.svalero.asociation.model.Usuario;
-import com.svalero.asociation.repository.RolRepository;
 import com.svalero.asociation.repository.SocioRepository;
-import com.svalero.asociation.repository.UsuarioRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -17,7 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import static org.junit.jupiter.api.Assertions.*;
 
 
@@ -26,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static java.lang.Character.getType;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.Mockito.*;
 
@@ -41,15 +38,6 @@ public class SocioServiceTest {
 
     @Mock
     private ModelMapper mapper;
-
-    @Mock
-    private UsuarioRepository usuarioRepository;
-
-    @Mock
-    private RolRepository rolRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
 
     @Mock
     private AccessUserService accessUserService;
@@ -277,13 +265,41 @@ public class SocioServiceTest {
 
     @Test
     public void testDelete(){
-        Socio mockSocio = new Socio(3,"99932405D","Oscar", "Lanuza", "email@email.com", "C Subida 128", "991-003-323","Monoparental",false, LocalDate.now().plusDays(1), null, new ArrayList<>());
+        Socio mockSocio = new Socio(3,"99932405D","Oscar", "Lanuza", "email@email.com", "C Subida 128", "991-003-323","Monoparental",true, LocalDate.now().minusDays(10), null, new ArrayList<>());
+        Usuario socioUsuario = Usuario.builder().id(10L).email("email@email.com").active(true).build();
+        Participante participante = new Participante();
+        participante.setId(7L);
+        participante.setActive(true);
+        participante.setReason(null);
+        Usuario participanteUsuario = Usuario.builder().id(11L).email("participante@email.com").active(true).build();
+        participante.setUsuario(participanteUsuario);
+        mockSocio.setUsuario(socioUsuario);
+        mockSocio.setParticipanteList(List.of(participante));
 
         when(socioRepository.findById(mockSocio.getId())).thenReturn(Optional.of(mockSocio));
+        when(socioRepository.save(mockSocio)).thenReturn(mockSocio);
 
         socioService.delete(mockSocio.getId());
 
-        verify(socioRepository, times(1)).delete(mockSocio);
+        assertFalse(mockSocio.getActive());
+        assertNotNull(mockSocio.getOutDate());
+        assertFalse(participante.getActive());
+        assertNotNull(participante.getOutDate());
+        assertEquals("Socio dado de baja", participante.getReason());
+        verify(accessUserService).deactivateAccessUser(socioUsuario);
+        verify(accessUserService).deactivateAccessUser(participanteUsuario);
+        verify(socioRepository).save(mockSocio);
+        verify(socioRepository, never()).delete(any(Socio.class));
+    }
+
+    @Test
+    public void testDeleteAlreadyInactiveThrowsBusinessRuleException() {
+        Socio socio = new Socio(3,"99932405D","Oscar", "Lanuza", "email@email.com", "C Subida 128", "991-003-323","Monoparental",false, LocalDate.now().minusDays(10), LocalDate.now().minusDays(1), new ArrayList<>());
+        when(socioRepository.findById(3L)).thenReturn(Optional.of(socio));
+
+        assertThrows(BusinessRuleException.class, () -> socioService.delete(3L));
+
+        verify(socioRepository, never()).save(any(Socio.class));
     }
 
 }

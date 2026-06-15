@@ -48,6 +48,7 @@ public class ServicioService {
         dto.setRequisites(servicio.getRequisites());
         dto.setDuration(servicio.getDuration());
         dto.setCapacity(servicio.getCapacity());
+        dto.setStatus(servicio.getStatus());
 
         return dto;
     }
@@ -93,8 +94,14 @@ public class ServicioService {
 
     public void delete(long id){
         Servicio servicio = servicioRepository.findById(id).orElseThrow(()-> new ServicioNotFoundException("Servicio con la ID:"+ id+ "no encontrado"));
-        logger.info("Servicio with ID: {} deleted successfully", id);
-        servicioRepository.delete(servicio);
+
+        if ("ARCHIVED".equalsIgnoreCase(servicio.getStatus())) {
+            throw new com.svalero.asociation.exception.BusinessRuleException("El servicio con ID " + id + " ya fue archivado");
+        }
+
+        servicio.setStatus("ARCHIVED");
+        servicioRepository.save(servicio);
+        logger.info("Servicio with ID: {} archived successfully", id);
     }
 
     public Servicio findModelById(long id) {

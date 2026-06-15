@@ -72,8 +72,16 @@ public class InscripcionActividadService {
 
     @Transactional
     public void deleteInscripcion(long actividadId, long inscripcionId) {
-        inscripcionActividadRepository.deleteByIdAndActividadId(inscripcionId, actividadId);
-        logger.info("Inscripcion ID {} deleted from actividad ID {}", inscripcionId, actividadId);
+        InscripcionActividad inscripcion = inscripcionActividadRepository.findByIdAndActividadId(inscripcionId, actividadId)
+                .orElseThrow(() -> new ActividadNotFoundException("Inscripcion de actividad no encontrada"));
+
+        if ("CANCELLED".equalsIgnoreCase(inscripcion.getState())) {
+            throw new BusinessRuleException("La inscripcion de actividad con ID " + inscripcionId + " ya fue cancelada");
+        }
+
+        inscripcion.setState("CANCELLED");
+        inscripcionActividadRepository.save(inscripcion);
+        logger.info("Inscripcion ID {} cancelled from actividad ID {}", inscripcionId, actividadId);
     }
 
     public List<ParticipanteDto> listarParticipantes(long actividadId) {
