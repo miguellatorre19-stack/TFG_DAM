@@ -2,6 +2,7 @@ package com.svalero.asociation.service;
 
 import com.svalero.asociation.dto.AccessCredentialsDto;
 import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.BajaRequestDto;
 import com.svalero.asociation.dto.TrabajadorAccessResponseDto;
 import com.svalero.asociation.dto.TrabajadorDto;
 import com.svalero.asociation.dto.TrabajadorOutDto;
@@ -182,18 +183,37 @@ public class TrabajadorService {
     }
 
     @Transactional
-    public void delete(long id) {
+    public void darDeBaja(long id, BajaRequestDto bajaRequest) {
         Trabajador trabajador = trabajadorRepository.findById(id).orElseThrow(()-> new TrabajadorNotFoundException("Trabajador con la ID:"+ id+ "no encontrado"));
 
         if (Boolean.FALSE.equals(trabajador.getActive())) {
             throw new BusinessRuleException("El trabajador con ID " + id + " ya fue dado de baja");
         }
 
+        LocalDate outDate = bajaRequest.getOutDate() != null ? bajaRequest.getOutDate() : LocalDate.now();
         trabajador.setActive(false);
-        trabajador.setOutDate(LocalDate.now());
+        trabajador.setOutDate(outDate);
+        trabajador.setReason(bajaRequest.getReason().trim());
         trabajadorRepository.save(trabajador);
         accessUserService.deactivateAccessUser(trabajador.getUsuario());
         logger.info("Trabajador with ID: {} marked as inactive", id);
+    }
+
+    @Transactional
+    public void reactivar(long id) {
+        Trabajador trabajador = trabajadorRepository.findById(id)
+                .orElseThrow(() -> new TrabajadorNotFoundException("Trabajador con la ID:"+ id+ "no encontrado"));
+
+        if (Boolean.TRUE.equals(trabajador.getActive())) {
+            throw new BusinessRuleException("El trabajador con ID " + id + " ya esta activo");
+        }
+
+        trabajador.setActive(true);
+        trabajador.setOutDate(null);
+        trabajador.setReason(null);
+        trabajadorRepository.save(trabajador);
+        accessUserService.reactivateAccessUser(trabajador.getUsuario());
+        logger.info("Trabajador with ID: {} reactivated", id);
     }
 
     private TrabajadorOutDto toOutDto(Trabajador trabajador) {
@@ -209,6 +229,7 @@ public class TrabajadorService {
         dto.setContractType(trabajador.getContractType());
         dto.setActive(trabajador.getActive());
         dto.setOutDate(trabajador.getOutDate());
+        dto.setReason(trabajador.getReason());
         dto.setServicioOutDto(toServicioOutDto(trabajador.getServicios()));
         return dto;
     }

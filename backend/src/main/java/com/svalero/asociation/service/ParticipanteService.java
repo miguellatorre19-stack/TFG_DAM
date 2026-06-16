@@ -3,6 +3,7 @@ package com.svalero.asociation.service;
 
 import com.svalero.asociation.dto.AccessCredentialsDto;
 import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.BajaRequestDto;
 import com.svalero.asociation.dto.ParticipanteAccessResponseDto;
 import com.svalero.asociation.dto.ParticipanteDto;
 import com.svalero.asociation.dto.ParticipanteOutDto;
@@ -148,18 +149,40 @@ public class ParticipanteService {
     }
 
     @Transactional
-    public void delete(long id) {
+    public void darDeBaja(long id, BajaRequestDto bajaRequest) {
         Participante participante = participanteRepository.findById(id).orElseThrow(() -> new ParticipanteNotFoundException("Participante con ID:" + id + "no encontrado"));
 
         if (Boolean.FALSE.equals(participante.getActive())) {
             throw new BusinessRuleException("El participante con ID " + id + " ya fue dado de baja");
         }
 
+        LocalDate outDate = bajaRequest.getOutDate() != null ? bajaRequest.getOutDate() : LocalDate.now();
         participante.setActive(false);
-        participante.setOutDate(LocalDate.now());
+        participante.setOutDate(outDate);
+        participante.setReason(bajaRequest.getReason().trim());
         participanteRepository.save(participante);
         accessUserService.deactivateAccessUser(participante.getUsuario());
         logger.info("Participante with ID: {} marked as inactive", id);
+    }
+
+    @Transactional
+    public void reactivar(long id) {
+        Participante participante = participanteRepository.findById(id)
+                .orElseThrow(() -> new ParticipanteNotFoundException("Participante con ID:" + id + "no encontrado"));
+
+        if (Boolean.TRUE.equals(participante.getActive())) {
+            throw new BusinessRuleException("El participante con ID " + id + " ya esta activo");
+        }
+        if (participante.getSocio() != null && Boolean.FALSE.equals(participante.getSocio().getActive())) {
+            throw new BusinessRuleException("No se puede reactivar al participante con ID " + id + " mientras su socio siga de baja");
+        }
+
+        participante.setActive(true);
+        participante.setOutDate(null);
+        participante.setReason(null);
+        participanteRepository.save(participante);
+        accessUserService.reactivateAccessUser(participante.getUsuario());
+        logger.info("Participante with ID: {} reactivated", id);
     }
 
     private ParticipanteDto toDto(Participante participante) {

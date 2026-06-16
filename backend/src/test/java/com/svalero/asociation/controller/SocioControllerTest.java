@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.*;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.svalero.asociation.dto.BajaRequestDto;
 import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.exception.BusinessRuleException;
 import com.svalero.asociation.exception.SocioNotFoundException;
@@ -312,28 +313,35 @@ public class SocioControllerTest {
     }
 
     @Test
-    void testDeleteSocio_For204() throws Exception{
+    void testBajaSocio_For204() throws Exception{
         List<Participante>participantes = new ArrayList<>();
         Socio socio = new Socio(2, "777777U", "Marcos", "García", "email@email.com", "C Recogidas 128", "888-566-323", "Nuclear", true, LocalDate.now().plusDays(1), null, participantes);
+        BajaRequestDto bajaRequestDto = new BajaRequestDto("Solicitud telefonica", LocalDate.now());
 
-        doNothing().when(socioService).delete(socio.getId());
+        doNothing().when(socioService).darDeBaja(eq(socio.getId()), any(BajaRequestDto.class));
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/socios/" + socio.getId())
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/socios/" + socio.getId() + "/baja")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bajaRequestDto))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    void testDeleteSocio_For404() throws Exception{
+    void testBajaSocio_For404() throws Exception{
 
         List<Participante>participantes = new ArrayList<>();
         Socio socio = new Socio(2, "777777U", "Marcos", "García", "email@email.com", "C Recogidas 128", "888-566-323", "Nuclear", true, LocalDate.now().plusDays(1), null, participantes);
+        BajaRequestDto bajaRequestDto = new BajaRequestDto("Solicitud telefonica", LocalDate.now());
 
-        when(socioService.findById(socio.getId())).thenThrow(new SocioNotFoundException("Socio con ID" + socio.getId() +" no encontrado"));
+        doThrow(new SocioNotFoundException("Socio con ID" + socio.getId() +" no encontrado"))
+                .when(socioService).darDeBaja(eq(socio.getId()), any(BajaRequestDto.class));
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/socios/" + socio.getId())
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/socios/" + socio.getId() + "/baja")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bajaRequestDto))
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isNotFound());
     }
 
 

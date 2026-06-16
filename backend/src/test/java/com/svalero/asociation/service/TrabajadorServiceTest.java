@@ -2,6 +2,7 @@ package com.svalero.asociation.service;
 
 import com.svalero.asociation.dto.AccessCodeResponseDto;
 import com.svalero.asociation.dto.AccessCredentialsDto;
+import com.svalero.asociation.dto.BajaRequestDto;
 import com.svalero.asociation.dto.TrabajadorAccessResponseDto;
 import com.svalero.asociation.dto.TrabajadorDto;
 import com.svalero.asociation.dto.TrabajadorOutDto;
@@ -255,7 +256,7 @@ public class TrabajadorServiceTest{
     }
 
     @Test
-    void testDelete() {
+    void testDarDeBaja() {
         Trabajador trabajador =   new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now(), LocalDate.now(), "Tiempo Parcial", null, null);
         Usuario usuario = Usuario.builder().id(12L).email("email@email").active(true).build();
         trabajador.setUsuario(usuario);
@@ -263,13 +264,36 @@ public class TrabajadorServiceTest{
         when(trabajadorRepository.findById(trabajador.getId())).thenReturn(Optional.of(trabajador));
         when(trabajadorRepository.save(trabajador)).thenReturn(trabajador);
 
-        trabajadorService.delete(trabajador.getId());
+        trabajadorService.darDeBaja(trabajador.getId(), new BajaRequestDto("Fin de relacion laboral", LocalDate.now().minusDays(3)));
 
         assertFalse(trabajador.getActive());
         assertNotNull(trabajador.getOutDate());
+        assertEquals(LocalDate.now().minusDays(3), trabajador.getOutDate());
+        assertEquals("Fin de relacion laboral", trabajador.getReason());
         verify(trabajadorRepository, times(1)).save(trabajador);
         verify(accessUserService).deactivateAccessUser(usuario);
         verify(trabajadorRepository, never()).delete(trabajador);
+    }
+
+    @Test
+    void testReactivate() {
+        Trabajador trabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now(), LocalDate.now(), "Tiempo Parcial", null, null);
+        trabajador.setActive(false);
+        trabajador.setOutDate(LocalDate.now().minusDays(1));
+        trabajador.setReason("Baja voluntaria");
+        Usuario usuario = Usuario.builder().id(12L).email("email@email").active(false).build();
+        trabajador.setUsuario(usuario);
+
+        when(trabajadorRepository.findById(1L)).thenReturn(Optional.of(trabajador));
+        when(trabajadorRepository.save(trabajador)).thenReturn(trabajador);
+
+        trabajadorService.reactivar(1L);
+
+        assertTrue(trabajador.getActive());
+        assertNull(trabajador.getOutDate());
+        assertNull(trabajador.getReason());
+        verify(accessUserService).reactivateAccessUser(usuario);
+        verify(trabajadorRepository).save(trabajador);
     }
 
 }

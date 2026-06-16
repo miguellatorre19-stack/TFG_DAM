@@ -2,6 +2,7 @@ package com.svalero.asociation.service;
 
 import com.svalero.asociation.dto.AccessCredentialsDto;
 import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.BajaRequestDto;
 import com.svalero.asociation.dto.SocioAccessResponseDto;
 import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.exception.BusinessRuleException;
@@ -264,7 +265,7 @@ public class SocioServiceTest {
     }
 
     @Test
-    public void testDelete(){
+    public void testDarDeBaja(){
         Socio mockSocio = new Socio(3,"99932405D","Oscar", "Lanuza", "email@email.com", "C Subida 128", "991-003-323","Monoparental",true, LocalDate.now().minusDays(10), null, new ArrayList<>());
         Usuario socioUsuario = Usuario.builder().id(10L).email("email@email.com").active(true).build();
         Participante participante = new Participante();
@@ -279,13 +280,15 @@ public class SocioServiceTest {
         when(socioRepository.findById(mockSocio.getId())).thenReturn(Optional.of(mockSocio));
         when(socioRepository.save(mockSocio)).thenReturn(mockSocio);
 
-        socioService.delete(mockSocio.getId());
+        socioService.darDeBaja(mockSocio.getId(), new BajaRequestDto("Baja voluntaria", LocalDate.now().minusDays(2)));
 
         assertFalse(mockSocio.getActive());
         assertNotNull(mockSocio.getOutDate());
+        assertEquals(LocalDate.now().minusDays(2), mockSocio.getOutDate());
         assertFalse(participante.getActive());
         assertNotNull(participante.getOutDate());
-        assertEquals("Socio dado de baja", participante.getReason());
+        assertEquals("Baja voluntaria", mockSocio.getReason());
+        assertEquals("Socio dado de baja: Baja voluntaria", participante.getReason());
         verify(accessUserService).deactivateAccessUser(socioUsuario);
         verify(accessUserService).deactivateAccessUser(participanteUsuario);
         verify(socioRepository).save(mockSocio);
@@ -293,13 +296,40 @@ public class SocioServiceTest {
     }
 
     @Test
-    public void testDeleteAlreadyInactiveThrowsBusinessRuleException() {
+    public void testDarDeBajaAlreadyInactiveThrowsBusinessRuleException() {
         Socio socio = new Socio(3,"99932405D","Oscar", "Lanuza", "email@email.com", "C Subida 128", "991-003-323","Monoparental",false, LocalDate.now().minusDays(10), LocalDate.now().minusDays(1), new ArrayList<>());
         when(socioRepository.findById(3L)).thenReturn(Optional.of(socio));
 
-        assertThrows(BusinessRuleException.class, () -> socioService.delete(3L));
+        assertThrows(BusinessRuleException.class, () -> socioService.darDeBaja(3L, new BajaRequestDto("Baja voluntaria", LocalDate.now())));
 
         verify(socioRepository, never()).save(any(Socio.class));
+    }
+
+    @Test
+    public void testReactivate() {
+        Socio socio = new Socio(3,"99932405D","Oscar", "Lanuza", "email@email.com", "C Subida 128", "991-003-323","Monoparental",false, LocalDate.now().minusDays(10), LocalDate.now().minusDays(1), new ArrayList<>());
+        socio.setReason("Baja voluntaria");
+        Usuario usuario = Usuario.builder().id(10L).email("email@email.com").active(false).build();
+        Participante participante = new Participante();
+        participante.setId(7L);
+        participante.setActive(false);
+        participante.setReason("Socio dado de baja");
+        participante.setOutDate(LocalDate.now().minusDays(1));
+        socio.setUsuario(usuario);
+        socio.setParticipanteList(List.of(participante));
+
+        when(socioRepository.findById(3L)).thenReturn(Optional.of(socio));
+        when(socioRepository.save(socio)).thenReturn(socio);
+
+        socioService.reactivar(3L);
+
+        assertTrue(socio.getActive());
+        assertNull(socio.getOutDate());
+        assertNull(socio.getReason());
+        assertFalse(participante.getActive());
+        assertNotNull(participante.getOutDate());
+        verify(accessUserService).reactivateAccessUser(usuario);
+        verify(socioRepository).save(socio);
     }
 
 }

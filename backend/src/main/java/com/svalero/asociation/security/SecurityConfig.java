@@ -77,6 +77,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/trabajadores", "/api/v1/trabajadores/**")
                         .hasRole("ADMIN")
 
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/socios/*/baja",
+                                "/api/v1/socios/*/reactivar",
+                                "/api/v1/participantes/*/baja",
+                                "/api/v1/participantes/*/reactivar"
+                        ).hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
+
                         .requestMatchers("/api/v1/socios", "/api/v1/socios/**")
                         .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO", "PARTICIPANTE")
 

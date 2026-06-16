@@ -47,6 +47,8 @@ public class Trabajador {
     @Column
     @NotBlank(message = "necesita una tipo de contrato")
     private String contractType;
+    @Column(columnDefinition = "TEXT")
+    private String reason;
     @Column(nullable = false)
     private Boolean active = true;
     @Column(name = "out_date")
@@ -84,6 +86,7 @@ public class Trabajador {
         this.birthDate = birthDate;
         this.entryDate = entryDate;
         this.contractType = contractType;
+        this.reason = null;
         this.active = true;
         this.outDate = null;
         this.actividad = actividad;

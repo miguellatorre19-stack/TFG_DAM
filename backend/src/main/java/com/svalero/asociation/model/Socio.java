@@ -45,6 +45,8 @@ public class Socio {
         private String familyModel;
         @Column(name = "active")
         private Boolean active = true;
+        @Column(columnDefinition = "TEXT")
+        private String reason;
         @Column(name = "entry_date")
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate entryDate = LocalDate.now();
@@ -80,6 +82,7 @@ public class Socio {
                 this.phoneNumber = phoneNumber;
                 this.familyModel = familyModel;
                 this.active = active;
+                this.reason = null;
                 this.entryDate = entryDate;
                 this.outDate = outDate;
                 this.participanteList = participanteList;

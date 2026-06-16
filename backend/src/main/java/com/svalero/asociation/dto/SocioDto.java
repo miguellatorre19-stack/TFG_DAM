@@ -39,6 +39,8 @@ public class SocioDto {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate outDate;
 
+    private String reason;
+
     private List<ParticipanteDto> participanteDtoList;
 
     public SocioDto(long id, String dni, String name, String surname, String email, String phoneNumber,

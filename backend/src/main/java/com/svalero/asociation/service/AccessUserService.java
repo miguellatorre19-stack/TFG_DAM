@@ -68,6 +68,15 @@ public class AccessUserService {
         usuarioRepository.save(usuario);
     }
 
+    public void reactivateAccessUser(Usuario usuario) {
+        if (usuario == null || usuario.getId() == null) {
+            return;
+        }
+
+        usuario.setActive(true);
+        usuarioRepository.save(usuario);
+    }
+
     public void deleteAccessUser(Usuario usuario) {
         if (usuario == null || usuario.getId() == null) {
             return;

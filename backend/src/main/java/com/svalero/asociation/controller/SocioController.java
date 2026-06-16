@@ -1,6 +1,7 @@
 package com.svalero.asociation.controller;
 
 import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.BajaRequestDto;
 import com.svalero.asociation.dto.SocioAccessResponseDto;
 import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.model.Socio;
@@ -77,10 +78,17 @@ public class SocioController {
         return ResponseEntity.ok(accessCode);
     }
 
-    @DeleteMapping("/v1/socios/{id}")
-    public ResponseEntity<Void> deleteSocio(@PathVariable long id){
-        logger.info("DELETE/socios");
-        socioService.delete(id);
+    @PostMapping("/v1/socios/{id}/baja")
+    public ResponseEntity<Void> bajaSocio(@PathVariable long id, @Valid @RequestBody BajaRequestDto bajaRequestDto) {
+        logger.info("POST/socios/{id}/baja");
+        socioService.darDeBaja(id, bajaRequestDto);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/v1/socios/{id}/reactivar")
+    public ResponseEntity<Void> reactivarSocio(@PathVariable long id) {
+        logger.info("POST/socios/{id}/reactivar");
+        socioService.reactivar(id);
         return ResponseEntity.noContent().build();
     }
 

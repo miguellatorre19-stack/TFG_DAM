@@ -21,6 +21,7 @@ public class TrabajadorOutDto {
     private String contractType;
     private Boolean active;
     private LocalDate outDate;
+    private String reason;
     private ServicioOutDto servicioOutDto;
 
     public TrabajadorOutDto(long id, String dni, String name, String surname, String email, String phoneNumber,
