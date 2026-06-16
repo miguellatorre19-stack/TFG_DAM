@@ -3,13 +3,16 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
+import BajaDialog from "@/components/BajaDialog";
 import CredentialsNotice from "@/components/CredentialsNotice";
 import { canAccessAdminPanel, getUser } from "@/services/authService";
 import { getServicios } from "@/services/servicioService";
 import {
   createTrabajador,
+  darDeBajaTrabajador,
   getTrabajadores,
   regenerateTrabajadorAccessCode,
+  reactivarTrabajador,
   updateTrabajador,
   type TrabajadorFormData,
 } from "@/services/trabajadorService";
@@ -35,6 +38,7 @@ export default function TrabajadoresPage() {
 
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
   const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [statusFilter, setStatusFilter] = useState<"active" | "inactive">("active");
   const [formData, setFormData] = useState<TrabajadorFormData>(() =>
     createEmptyForm()
   );
@@ -42,20 +46,25 @@ export default function TrabajadoresPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [reactivatingId, setReactivatingId] = useState<number | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [issuedCredentials, setIssuedCredentials] =
     useState<IssuedAccessCredentials | null>(null);
+  const [bajaTarget, setBajaTarget] = useState<Trabajador | null>(null);
+  const [bajaReason, setBajaReason] = useState("");
+  const [bajaError, setBajaError] = useState("");
 
-  async function loadData() {
+  async function loadData(nextFilter: "active" | "inactive" = statusFilter) {
     setLoading(true);
     setError("");
 
     try {
       const [trabajadoresData, serviciosData] = await Promise.all([
-        getTrabajadores(),
-        getServicios(),
+        getTrabajadores(nextFilter === "active"),
+        getServicios(false),
       ]);
       setTrabajadores(trabajadoresData);
       setServicios(serviciosData);
@@ -85,7 +94,7 @@ export default function TrabajadoresPage() {
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, [router]);
+  }, [router, statusFilter]);
 
   function handleInputChange(
     field: keyof TrabajadorFormData,
@@ -191,6 +200,86 @@ export default function TrabajadoresPage() {
     }
   }
 
+  async function handleDelete(trabajador: Trabajador) {
+    setBajaTarget(trabajador);
+    setBajaReason("");
+    setBajaError("");
+    setError("");
+    setSuccessMessage("");
+    setIssuedCredentials(null);
+  }
+
+  function closeBajaDialog() {
+    setBajaTarget(null);
+    setBajaReason("");
+    setBajaError("");
+  }
+
+  async function confirmBajaTrabajador() {
+    if (!bajaTarget) {
+      return;
+    }
+
+    const trimmedReason = bajaReason.trim();
+
+    if (!trimmedReason) {
+      setBajaError("Debes indicar el motivo de la baja.");
+      return;
+    }
+
+    setDeletingId(bajaTarget.id);
+    setError("");
+    setBajaError("");
+    setSuccessMessage("");
+    setIssuedCredentials(null);
+
+    try {
+      await darDeBajaTrabajador(bajaTarget.id, { reason: trimmedReason });
+      if (editingTrabajadorId === bajaTarget.id) {
+        handleCancelEdit();
+      }
+      setSuccessMessage("Trabajador dado de baja correctamente.");
+      closeBajaDialog();
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se ha podido dar de baja al trabajador.";
+      setError(message);
+      setBajaError(message);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function handleReactivate(trabajador: Trabajador) {
+    if (!window.confirm(`Se reactivara al trabajador ${trabajador.name ?? trabajador.id}.`)) {
+      return;
+    }
+
+    setReactivatingId(trabajador.id);
+    setError("");
+    setSuccessMessage("");
+    setIssuedCredentials(null);
+
+    try {
+      await reactivarTrabajador(trabajador.id);
+      setSuccessMessage("Trabajador reactivado correctamente.");
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se ha podido reactivar al trabajador."
+      );
+    } finally {
+      setReactivatingId(null);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-100">
       <AppNav />
@@ -201,6 +290,22 @@ export default function TrabajadoresPage() {
           <p className="mt-2 text-slate-600">
             Alta, edicion y baja del personal profesional, junto con sus credenciales de acceso.
           </p>
+          <div className="mt-4 flex items-center gap-3">
+            <label className="text-sm font-medium text-slate-700" htmlFor="trabajadores-status-filter">
+              Vista
+            </label>
+            <select
+              id="trabajadores-status-filter"
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as "active" | "inactive")
+              }
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500"
+            >
+              <option value="active">Activos</option>
+              <option value="inactive">Inactivos</option>
+            </select>
+          </div>
         </div>
 
         <form
@@ -390,7 +495,7 @@ export default function TrabajadoresPage() {
           </div>
         </form>
 
-        <div className="overflow-hidden rounded-2xl bg-white shadow">
+        <div className="overflow-x-auto rounded-2xl bg-white shadow">
           {loading && (
             <p className="p-6 text-sm text-slate-600">Cargando trabajadores...</p>
           )}
@@ -402,7 +507,7 @@ export default function TrabajadoresPage() {
           )}
 
           {!loading && !error && trabajadores.length > 0 && (
-            <table className="w-full border-collapse text-left text-sm">
+            <table className="min-w-[1180px] w-full border-collapse text-left text-sm">
               <thead className="bg-slate-50 text-slate-700">
                 <tr>
                   <th className="px-4 py-3 font-semibold">ID</th>
@@ -410,6 +515,9 @@ export default function TrabajadoresPage() {
                   <th className="px-4 py-3 font-semibold">Email</th>
                   <th className="px-4 py-3 font-semibold">Telefono</th>
                   <th className="px-4 py-3 font-semibold">Servicio</th>
+                  <th className="px-4 py-3 font-semibold">Estado</th>
+                  <th className="px-4 py-3 font-semibold">Fecha baja</th>
+                  <th className="px-4 py-3 font-semibold">Motivo</th>
                   <th className="px-4 py-3 font-semibold">Acciones</th>
                 </tr>
               </thead>
@@ -431,8 +539,17 @@ export default function TrabajadoresPage() {
                     <td className="px-4 py-3 text-slate-600">
                       {trabajador.servicioOutDto?.description ?? "-"}
                     </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {trabajador.active === false ? "Inactivo" : "Activo"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {trabajador.outDate ?? "-"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {trabajador.reason ?? "-"}
+                    </td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() => handleEdit(trabajador)}
@@ -450,6 +567,26 @@ export default function TrabajadoresPage() {
                             ? "Regenerando..."
                             : "Regenerar acceso"}
                         </button>
+                        {trabajador.active !== false && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(trabajador)}
+                            disabled={deletingId === trabajador.id}
+                            className="rounded-lg border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {deletingId === trabajador.id ? "Dando de baja..." : "Dar de baja"}
+                          </button>
+                        )}
+                        {trabajador.active === false && (
+                          <button
+                            type="button"
+                            onClick={() => handleReactivate(trabajador)}
+                            disabled={reactivatingId === trabajador.id}
+                            className="rounded-lg border border-emerald-300 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {reactivatingId === trabajador.id ? "Reactivando..." : "Reactivar"}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -459,6 +596,18 @@ export default function TrabajadoresPage() {
           )}
         </div>
       </section>
+
+      <BajaDialog
+        open={bajaTarget !== null}
+        title="Registrar baja de trabajador"
+        description="La baja deja inactivo al trabajador y desactiva su acceso. El motivo quedara registrado."
+        reason={bajaReason}
+        error={bajaError}
+        busy={deletingId !== null}
+        onReasonChange={setBajaReason}
+        onClose={closeBajaDialog}
+        onConfirm={confirmBajaTrabajador}
+      />
     </main>
   );
 }

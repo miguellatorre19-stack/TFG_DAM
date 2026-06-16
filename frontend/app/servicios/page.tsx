@@ -6,6 +6,7 @@ import AppNav from "@/components/AppNav";
 import { canAccessAdminPanel, getUser } from "@/services/authService";
 import {
   createServicio,
+  deleteServicio,
   getServicios,
   updateServicio,
   type ServicioFormData,
@@ -26,20 +27,22 @@ export default function ServiciosPage() {
   const router = useRouter();
 
   const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [statusFilter, setStatusFilter] = useState<"active" | "archived">("active");
   const [formData, setFormData] = useState<ServicioFormData>(() => createEmptyForm());
   const [editingServicioId, setEditingServicioId] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  async function loadServicios() {
+  async function loadServicios(nextFilter: "active" | "archived" = statusFilter) {
     setLoading(true);
     setError("");
 
     try {
-      const data = await getServicios();
+      const data = await getServicios(nextFilter === "archived");
       setServicios(data);
     } catch (error) {
       console.error(error);
@@ -67,7 +70,7 @@ export default function ServiciosPage() {
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, [router]);
+  }, [router, statusFilter]);
 
   function handleInputChange(
     field: keyof ServicioFormData,
@@ -131,6 +134,34 @@ export default function ServiciosPage() {
     }
   }
 
+  async function handleArchive(servicio: Servicio) {
+    if (!window.confirm(`Se archivara el servicio ${servicio.description ?? servicio.id}.`)) {
+      return;
+    }
+
+    setDeletingId(servicio.id);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      await deleteServicio(servicio.id);
+      if (editingServicioId === servicio.id) {
+        handleCancelEdit();
+      }
+      setSuccessMessage("Servicio archivado correctamente.");
+      await loadServicios();
+    } catch (error) {
+      console.error(error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se ha podido archivar el servicio."
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-100">
       <AppNav />
@@ -141,6 +172,22 @@ export default function ServiciosPage() {
           <p className="mt-2 text-slate-600">
             Gestion completa de servicios especializados ofrecidos por trabajadores cualificados.
           </p>
+          <div className="mt-4 flex items-center gap-3">
+            <label className="text-sm font-medium text-slate-700" htmlFor="servicios-status-filter">
+              Vista
+            </label>
+            <select
+              id="servicios-status-filter"
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as "active" | "archived")
+              }
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500"
+            >
+              <option value="active">Activos</option>
+              <option value="archived">Archivados</option>
+            </select>
+          </div>
         </div>
 
         <form
@@ -270,7 +317,7 @@ export default function ServiciosPage() {
           </div>
         </form>
 
-        <div className="overflow-hidden rounded-2xl bg-white shadow">
+        <div className="overflow-x-auto rounded-2xl bg-white shadow">
           {loading && (
             <p className="p-6 text-sm text-slate-600">Cargando servicios...</p>
           )}
@@ -282,13 +329,14 @@ export default function ServiciosPage() {
           )}
 
           {!loading && !error && servicios.length > 0 && (
-            <table className="w-full border-collapse text-left text-sm">
+            <table className="min-w-[850px] w-full border-collapse text-left text-sm">
               <thead className="bg-slate-50 text-slate-700">
                 <tr>
                   <th className="px-4 py-3 font-semibold">ID</th>
                   <th className="px-4 py-3 font-semibold">Descripcion</th>
                   <th className="px-4 py-3 font-semibold">Periodicidad</th>
                   <th className="px-4 py-3 font-semibold">Capacidad</th>
+                  <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Acciones</th>
                 </tr>
               </thead>
@@ -305,6 +353,9 @@ export default function ServiciosPage() {
                     <td className="px-4 py-3 text-slate-600">
                       {servicio.capacity ?? "-"}
                     </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {servicio.status ?? "ACTIVE"}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <button
@@ -314,6 +365,16 @@ export default function ServiciosPage() {
                         >
                           Editar
                         </button>
+                        {servicio.status !== "ARCHIVED" && (
+                          <button
+                            type="button"
+                            onClick={() => handleArchive(servicio)}
+                            disabled={deletingId === servicio.id}
+                            className="rounded-lg border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {deletingId === servicio.id ? "Archivando..." : "Archivar"}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

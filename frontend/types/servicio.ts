@@ -5,5 +5,5 @@ export interface Servicio {
   capacity?: number;
   periodicity?: string;
   requisites?: string;
-  active?: boolean;
+  status?: string;
 }

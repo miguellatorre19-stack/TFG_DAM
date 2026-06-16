@@ -9,4 +9,7 @@ export interface Participante {
   needs?: string;
   typeRel?: string;
   socioID?: number;
+  active?: boolean;
+  reason?: string;
+  outDate?: string | null;
 }

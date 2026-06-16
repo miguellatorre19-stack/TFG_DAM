@@ -13,9 +13,16 @@ export interface ServicioFormData {
   capacity: number;
 }
 
-export async function getServicios(): Promise<Servicio[]> {
+export async function getServicios(archived?: boolean): Promise<Servicio[]> {
   try {
-    return await apiFetch<Servicio[]>("/servicios");
+    const searchParams = new URLSearchParams();
+
+    if (typeof archived === "boolean") {
+      searchParams.set("archived", String(archived));
+    }
+
+    const query = searchParams.toString();
+    return await apiFetch<Servicio[]>(query ? `/servicios?${query}` : "/servicios");
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       return [];

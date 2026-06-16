@@ -8,4 +8,5 @@ export interface Actividad {
   capacity?: number;
   longitude?: number;
   latitude?: number;
+  status?: string;
 }
