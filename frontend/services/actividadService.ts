@@ -16,9 +16,16 @@ export interface ActividadFormData {
   latitude: number;
 }
 
-export async function getActividades(): Promise<Actividad[]> {
+export async function getActividades(archived?: boolean): Promise<Actividad[]> {
   try {
-    return await apiFetch<Actividad[]>("/actividades");
+    const searchParams = new URLSearchParams();
+
+    if (typeof archived === "boolean") {
+      searchParams.set("archived", String(archived));
+    }
+
+    const query = searchParams.toString();
+    return await apiFetch<Actividad[]>(query ? `/actividades?${query}` : "/actividades");
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       return [];

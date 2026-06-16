@@ -7,5 +7,7 @@ export interface Socio {
   dni?: string;
   active?: boolean;
   entryDate?: string;
+  outDate?: string | null;
+  reason?: string | null;
   familyModel?: string;
 }

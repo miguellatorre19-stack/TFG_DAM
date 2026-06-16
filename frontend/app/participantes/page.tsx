@@ -3,12 +3,15 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
+import BajaDialog from "@/components/BajaDialog";
 import CredentialsNotice from "@/components/CredentialsNotice";
 import { canAccessAdminPanel, getUser } from "@/services/authService";
 import {
   createParticipante,
+  darDeBajaParticipante,
   getParticipantes,
   regenerateParticipanteAccessCode,
+  reactivarParticipante,
   updateParticipante,
   type ParticipanteFormData,
 } from "@/services/participanteService";
@@ -36,6 +39,7 @@ export default function ParticipantesPage() {
 
   const [participantes, setParticipantes] = useState<Participante[]>([]);
   const [socios, setSocios] = useState<Socio[]>([]);
+  const [statusFilter, setStatusFilter] = useState<"active" | "inactive">("active");
   const [formData, setFormData] = useState<ParticipanteFormData>(() =>
     createEmptyForm()
   );
@@ -43,20 +47,25 @@ export default function ParticipantesPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [reactivatingId, setReactivatingId] = useState<number | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [issuedCredentials, setIssuedCredentials] =
     useState<IssuedAccessCredentials | null>(null);
+  const [bajaTarget, setBajaTarget] = useState<Participante | null>(null);
+  const [bajaReason, setBajaReason] = useState("");
+  const [bajaError, setBajaError] = useState("");
 
-  async function loadData() {
+  async function loadData(nextFilter: "active" | "inactive" = statusFilter) {
     setLoading(true);
     setError("");
 
     try {
       const [participantesData, sociosData] = await Promise.all([
-        getParticipantes(),
-        getSocios(),
+        getParticipantes(nextFilter === "active"),
+        getSocios(true),
       ]);
       setParticipantes(participantesData);
       setSocios(sociosData);
@@ -86,7 +95,7 @@ export default function ParticipantesPage() {
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, [router]);
+  }, [router, statusFilter]);
 
   function handleInputChange(
     field: keyof ParticipanteFormData,
@@ -193,6 +202,86 @@ export default function ParticipantesPage() {
     }
   }
 
+  async function handleDelete(participante: Participante) {
+    setBajaTarget(participante);
+    setBajaReason("");
+    setBajaError("");
+    setError("");
+    setSuccessMessage("");
+    setIssuedCredentials(null);
+  }
+
+  function closeBajaDialog() {
+    setBajaTarget(null);
+    setBajaReason("");
+    setBajaError("");
+  }
+
+  async function confirmBajaParticipante() {
+    if (!bajaTarget) {
+      return;
+    }
+
+    const trimmedReason = bajaReason.trim();
+
+    if (!trimmedReason) {
+      setBajaError("Debes indicar el motivo de la baja.");
+      return;
+    }
+
+    setDeletingId(bajaTarget.id);
+    setError("");
+    setBajaError("");
+    setSuccessMessage("");
+    setIssuedCredentials(null);
+
+    try {
+      await darDeBajaParticipante(bajaTarget.id, { reason: trimmedReason });
+      if (editingParticipanteId === bajaTarget.id) {
+        handleCancelEdit();
+      }
+      setSuccessMessage("Participante dado de baja correctamente.");
+      closeBajaDialog();
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se ha podido dar de baja al participante.";
+      setError(message);
+      setBajaError(message);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function handleReactivate(participante: Participante) {
+    if (!window.confirm(`Se reactivara al participante ${participante.name ?? participante.id}.`)) {
+      return;
+    }
+
+    setReactivatingId(participante.id);
+    setError("");
+    setSuccessMessage("");
+    setIssuedCredentials(null);
+
+    try {
+      await reactivarParticipante(participante.id);
+      setSuccessMessage("Participante reactivado correctamente.");
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se ha podido reactivar al participante."
+      );
+    } finally {
+      setReactivatingId(null);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-100">
       <AppNav />
@@ -203,6 +292,22 @@ export default function ParticipantesPage() {
           <p className="mt-2 text-slate-600">
             Alta, edicion y baja de participantes vinculados a socios, junto con sus credenciales.
           </p>
+          <div className="mt-4 flex items-center gap-3">
+            <label className="text-sm font-medium text-slate-700" htmlFor="participantes-status-filter">
+              Vista
+            </label>
+            <select
+              id="participantes-status-filter"
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as "active" | "inactive")
+              }
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500"
+            >
+              <option value="active">Activos</option>
+              <option value="inactive">Inactivos</option>
+            </select>
+          </div>
         </div>
 
         <form
@@ -419,34 +524,57 @@ export default function ParticipantesPage() {
             <table className="w-full border-collapse text-left text-sm">
               <thead className="bg-slate-50 text-slate-700">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">ID</th>
-                  <th className="px-4 py-3 font-semibold">Nombre</th>
-                  <th className="px-4 py-3 font-semibold">Email</th>
-                  <th className="px-4 py-3 font-semibold">Telefono</th>
-                  <th className="px-4 py-3 font-semibold">Socio</th>
+                  <th className="px-4 py-3 font-semibold">Participante</th>
+                  <th className="px-4 py-3 font-semibold">Vinculacion</th>
+                  <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {participantes.map((participante) => (
                   <tr key={participante.id}>
-                    <td className="px-4 py-3 text-slate-600">{participante.id}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {[participante.name, participante.surname]
-                        .filter(Boolean)
-                        .join(" ") || "Sin nombre"}
+                    <td className="px-4 py-4 align-top">
+                      <div className="space-y-1">
+                        <p className="font-medium text-slate-900">
+                          {[participante.name, participante.surname]
+                            .filter(Boolean)
+                            .join(" ") || "Sin nombre"}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          ID {participante.id} · {participante.dni ?? "Sin DNI"}
+                        </p>
+                        <p className="text-sm text-slate-600">
+                          {participante.email ?? "-"}
+                        </p>
+                        <p className="text-sm text-slate-600">
+                          {participante.phoneNumber ?? "-"}
+                        </p>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {participante.email ?? "-"}
+                    <td className="px-4 py-4 align-top text-sm text-slate-600">
+                      <p>{participante.socioID ? `Socio ${participante.socioID}` : "-"}</p>
+                      <p className="mt-1">{participante.typeRel ?? "Sin relacion"}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Nacimiento: {participante.birthDate ?? "-"}
+                      </p>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {participante.phoneNumber ?? "-"}
+                    <td className="px-4 py-4 align-top">
+                      <div className="space-y-2 text-sm text-slate-600">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                            participante.active === false
+                              ? "bg-slate-200 text-slate-700"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
+                          {participante.active === false ? "Inactivo" : "Activo"}
+                        </span>
+                        <p>Baja: {participante.outDate ?? "-"}</p>
+                        <p>Motivo: {participante.reason ?? "-"}</p>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {participante.socioID ? `Socio ${participante.socioID}` : "-"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
+                    <td className="px-4 py-4 align-top">
+                      <div className="flex min-w-48 flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() => handleEdit(participante)}
@@ -464,6 +592,26 @@ export default function ParticipantesPage() {
                             ? "Regenerando..."
                             : "Regenerar acceso"}
                         </button>
+                        {participante.active !== false && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(participante)}
+                            disabled={deletingId === participante.id}
+                            className="rounded-lg border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {deletingId === participante.id ? "Dando de baja..." : "Dar de baja"}
+                          </button>
+                        )}
+                        {participante.active === false && (
+                          <button
+                            type="button"
+                            onClick={() => handleReactivate(participante)}
+                            disabled={reactivatingId === participante.id}
+                            className="rounded-lg border border-emerald-300 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {reactivatingId === participante.id ? "Reactivando..." : "Reactivar"}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -473,6 +621,18 @@ export default function ParticipantesPage() {
           )}
         </div>
       </section>
+
+      <BajaDialog
+        open={bajaTarget !== null}
+        title="Registrar baja de participante"
+        description="La baja deja inactivo al participante y desactiva su acceso. El motivo quedara registrado."
+        reason={bajaReason}
+        error={bajaError}
+        busy={deletingId !== null}
+        onReasonChange={setBajaReason}
+        onClose={closeBajaDialog}
+        onConfirm={confirmBajaParticipante}
+      />
     </main>
   );
 }

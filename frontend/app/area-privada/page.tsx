@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMe, getUser, logout } from "@/services/authService";
 import { getActividades, inscribirActividad } from "@/services/actividadService";
-import { getServicios, inscribirServicio } from "@/services/servicioService";
+import { getServicios, solicitarServicio } from "@/services/servicioService";
 import type { LoginResponse, MeResponse } from "@/types/auth";
 import type { Actividad } from "@/types/actividad";
 import type { Servicio } from "@/types/servicio";
@@ -20,7 +20,6 @@ interface SelectedItem {
   date?: string;
   duration?: number;
   capacity?: number;
-  canJoin?: boolean;
 }
 
 interface LocalRequest {
@@ -236,7 +235,7 @@ export default function PrivateAreaPage() {
       if (selectedItem.kind === "actividad") {
         await inscribirActividad(selectedItem.id, parsedParticipantId);
       } else {
-        await inscribirServicio(selectedItem.id, parsedParticipantId);
+        await solicitarServicio(selectedItem.id, parsedParticipantId);
       }
 
       const request: LocalRequest = {
@@ -457,7 +456,6 @@ export default function PrivateAreaPage() {
                 date: actividad.dayActivity,
                 duration: actividad.duration,
                 capacity: actividad.capacity,
-                canJoin: actividad.canJoin,
               }))}
               onStart={startWizard}
               canStart={hasParticipantAccess}
@@ -597,8 +595,7 @@ function ContentList({
   canStart: boolean;
   blockedMessage: string;
 }) {
-  const defaultActionText =
-    kind === "actividad" ? "Iniciar inscripcion" : "Solicitar servicio";
+  const actionText = kind === "actividad" ? "Iniciar inscripcion" : "Solicitar servicio";
 
   return (
     <section className="rounded-3xl border border-[#d8d1c2] bg-[#fffdf7] p-6 shadow-sm">
@@ -660,18 +657,11 @@ function ContentList({
             <button
               type="button"
               onClick={() => onStart(item)}
-              disabled={!canStart || (item.kind === "actividad" && item.canJoin === false)}
+              disabled={!canStart}
               className="mt-5 w-full rounded-2xl bg-[#23675b] px-5 py-3 font-bold text-white hover:bg-[#1c554b] disabled:cursor-not-allowed disabled:bg-[#9bb7af]"
             >
-              {item.kind === "actividad" && item.canJoin === false
-                ? "Inscripcion cerrada"
-                : defaultActionText}
+              {actionText}
             </button>
-            {item.kind === "actividad" && item.canJoin === false && (
-              <p className="mt-3 text-sm text-[#703729]">
-                Esta actividad esta visible, pero no admite nuevas inscripciones.
-              </p>
-            )}
           </article>
         ))}
       </div>

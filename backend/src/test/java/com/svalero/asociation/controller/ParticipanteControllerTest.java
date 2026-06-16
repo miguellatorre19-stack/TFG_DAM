@@ -2,6 +2,7 @@ package com.svalero.asociation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.svalero.asociation.dto.BajaRequestDto;
 import com.svalero.asociation.dto.ParticipanteAccessResponseDto;
 import com.svalero.asociation.dto.ParticipanteDto;
 import com.svalero.asociation.dto.ParticipanteOutDto;
@@ -120,7 +121,7 @@ class ParticipanteControllerTest {
     @Test
     void addParticipanteDtoReturns201() throws Exception {
         ParticipanteDto requestDto = buildParticipanteDto("77777777U", "Alberto", 33L);
-        ParticipanteOutDto mappedResponse = buildParticipanteOutDto(1L, "77777777U", "Alberto", 1L);
+        ParticipanteDto mappedResponse = buildParticipanteDto("77777777U", "Alberto", 1L);
         ParticipanteAccessResponseDto accessResponse = new ParticipanteAccessResponseDto(
                 mappedResponse,
                 20L,
@@ -175,18 +176,27 @@ class ParticipanteControllerTest {
     }
 
     @Test
-    void deleteParticipanteReturns204() throws Exception {
-        doNothing().when(participanteService).delete(1L);
+    void bajaParticipanteReturns204() throws Exception {
+        BajaRequestDto bajaRequestDto = new BajaRequestDto("Solicitud familiar", LocalDate.now());
+        doNothing().when(participanteService).darDeBaja(eq(1L), any(BajaRequestDto.class));
 
-        mockMvc.perform(delete("/api/v1/participantes/1").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/api/v1/participantes/1/baja")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bajaRequestDto))
+                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    void deleteParticipanteReturns404() throws Exception {
-        doThrow(new ParticipanteNotFoundException("Participante no encontrado")).when(participanteService).delete(1L);
+    void bajaParticipanteReturns404() throws Exception {
+        BajaRequestDto bajaRequestDto = new BajaRequestDto("Solicitud familiar", LocalDate.now());
+        doThrow(new ParticipanteNotFoundException("Participante no encontrado"))
+                .when(participanteService).darDeBaja(eq(1L), any(BajaRequestDto.class));
 
-        mockMvc.perform(delete("/api/v1/participantes/1").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/api/v1/participantes/1/baja")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bajaRequestDto))
+                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
 

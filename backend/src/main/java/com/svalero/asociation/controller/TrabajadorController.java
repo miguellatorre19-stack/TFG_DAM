@@ -1,6 +1,7 @@
 package com.svalero.asociation.controller;
 
 import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.BajaRequestDto;
 import com.svalero.asociation.dto.TrabajadorAccessResponseDto;
 import com.svalero.asociation.dto.TrabajadorDto;
 import com.svalero.asociation.dto.TrabajadorOutDto;
@@ -31,8 +32,11 @@ public class TrabajadorController {
     public ResponseEntity<List<TrabajadorOutDto>> getAll(
             @RequestParam(value = "entryDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate entryDate,
             @RequestParam(value = "name", required = false) String name,
-            @RequestParam(value = "contractType", required = false) String contractType){
-        List<TrabajadorOutDto> alltrabajadores = trabajadorService.findAllDto(entryDate, name, contractType);
+            @RequestParam(value = "contractType", required = false) String contractType,
+            @RequestParam(value = "active", required = false) Boolean active){
+        List<TrabajadorOutDto> alltrabajadores = active == null
+                ? trabajadorService.findAllDto(entryDate, name, contractType)
+                : trabajadorService.findAllDto(entryDate, name, contractType, active);
         logger.info("GET/trabajadores");
         return ResponseEntity.ok(alltrabajadores);
     }
@@ -69,10 +73,17 @@ public class TrabajadorController {
         return ResponseEntity.ok(accessCode);
     }
 
-    @DeleteMapping("/v1/trabajadores/{id}")
-    public ResponseEntity<Void> deleteTrabajador (@PathVariable long id){
-        trabajadorService.delete(id);
-        logger.info("DELETE/trabajadores/{id}");
+    @PostMapping("/v1/trabajadores/{id}/baja")
+    public ResponseEntity<Void> bajaTrabajador(@PathVariable long id, @Valid @RequestBody BajaRequestDto bajaRequestDto) {
+        trabajadorService.darDeBaja(id, bajaRequestDto);
+        logger.info("POST/trabajadores/{id}/baja");
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/v1/trabajadores/{id}/reactivar")
+    public ResponseEntity<Void> reactivarTrabajador(@PathVariable long id) {
+        trabajadorService.reactivar(id);
+        logger.info("POST/trabajadores/{id}/reactivar");
         return ResponseEntity.noContent().build();
     }
 

@@ -4,10 +4,18 @@ import type {
   IssuedAccessCredentials,
   ParticipanteAccessResponse,
 } from "@/types/access";
+import type { BajaRequestData } from "@/types/lifecycle";
 
-export async function getParticipantes(): Promise<Participante[]> {
+export async function getParticipantes(active?: boolean): Promise<Participante[]> {
   try {
-    return await apiFetch<Participante[]>("/participantes");
+    const searchParams = new URLSearchParams();
+
+    if (typeof active === "boolean") {
+      searchParams.set("active", String(active));
+    }
+
+    const query = searchParams.toString();
+    return await apiFetch<Participante[]>(query ? `/participantes?${query}` : "/participantes");
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       return [];
@@ -51,9 +59,19 @@ export async function updateParticipante(
   });
 }
 
-export async function deleteParticipante(id: number): Promise<void> {
-  await apiFetch<void>(`/participantes/${id}`, {
-    method: "DELETE",
+export async function darDeBajaParticipante(
+  id: number,
+  data: BajaRequestData
+): Promise<void> {
+  await apiFetch<void>(`/participantes/${id}/baja`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function reactivarParticipante(id: number): Promise<void> {
+  await apiFetch<void>(`/participantes/${id}/reactivar`, {
+    method: "POST",
   });
 }
 

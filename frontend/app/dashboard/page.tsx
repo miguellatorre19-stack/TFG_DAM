@@ -36,9 +36,9 @@ const modules = [
     href: "/trabajadores",
   },
   {
-    title: "Inscripciones",
+    title: "Inscripciones y solicitudes",
     description:
-      "Seguimiento y gestion administrativa de solicitudes a actividades y servicios.",
+      "Seguimiento y gestion administrativa de inscripciones a actividades y solicitudes de servicios.",
     href: "/inscripciones",
   },
 ];

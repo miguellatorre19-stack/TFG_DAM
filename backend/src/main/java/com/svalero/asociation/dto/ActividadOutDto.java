@@ -18,5 +18,6 @@ public class ActividadOutDto {
     private Float duration;
     private Boolean canJoin;
     private Integer capacity;
+    private String status;
     private List<ParticipanteDto> participanteDtoList;
 }

@@ -24,8 +24,14 @@ public interface ParticipanteRepository extends CrudRepository<Participante, Lon
     @Query("SELECT s FROM participantes s JOIN FETCH s.socio WHERE " +
             "(:birthDate IS NULL OR s.birthDate >= :birthDate) AND " +
             "(:name IS NULL OR s.name = :name) AND " +
-            "(:typeRel IS NULL OR s.typeRel = :typeRel)")
+            "(:typeRel IS NULL OR s.typeRel = :typeRel) AND " +
+            "((:active IS NULL AND COALESCE(s.active, true) = true) OR (:active IS NOT NULL AND COALESCE(s.active, true) = :active))")
     List<Participante> findByFilters(@Param("birthDate") LocalDate birthDate,
                                 @Param("name") String name,
-                                @Param("typeRel") String typeRel);
+                                @Param("typeRel") String typeRel,
+                                @Param("active") Boolean active);
+
+    default List<Participante> findByFilters(LocalDate birthDate, String name, String typeRel) {
+        return findByFilters(birthDate, name, typeRel, null);
+    }
 }

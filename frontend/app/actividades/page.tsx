@@ -6,22 +6,17 @@ import AppNav from "@/components/AppNav";
 import { canAccessAdminPanel, getUser } from "@/services/authService";
 import {
   createActividad,
+  deleteActividad,
   getActividades,
   updateActividad,
   type ActividadFormData,
 } from "@/services/actividadService";
 import type { Actividad } from "@/types/actividad";
 
-function getLocalDateInputValue(): string {
-  const now = new Date();
-  const timezoneOffsetMs = now.getTimezoneOffset() * 60 * 1000;
-  return new Date(now.getTime() - timezoneOffsetMs).toISOString().slice(0, 10);
-}
-
 function createEmptyForm(): ActividadFormData {
   return {
     description: "",
-    dayActivity: getLocalDateInputValue(),
+    dayActivity: new Date().toISOString().slice(0, 10),
     typeActivity: "",
     duration: 1,
     canJoin: true,
@@ -35,20 +30,22 @@ export default function ActividadesPage() {
   const router = useRouter();
 
   const [actividades, setActividades] = useState<Actividad[]>([]);
+  const [statusFilter, setStatusFilter] = useState<"active" | "archived">("active");
   const [formData, setFormData] = useState<ActividadFormData>(() => createEmptyForm());
   const [editingActividadId, setEditingActividadId] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  async function loadActividades() {
+  async function loadActividades(nextFilter: "active" | "archived" = statusFilter) {
     setLoading(true);
     setError("");
 
     try {
-      const data = await getActividades();
+      const data = await getActividades(nextFilter === "archived");
       setActividades(data);
     } catch (error) {
       console.error(error);
@@ -76,7 +73,7 @@ export default function ActividadesPage() {
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, [router]);
+  }, [router, statusFilter]);
 
   function handleInputChange(
     field: keyof ActividadFormData,
@@ -94,7 +91,7 @@ export default function ActividadesPage() {
     setError("");
     setFormData({
       description: actividad.description ?? "",
-      dayActivity: actividad.dayActivity ?? getLocalDateInputValue(),
+      dayActivity: actividad.dayActivity ?? new Date().toISOString().slice(0, 10),
       typeActivity: actividad.typeActivity ?? "",
       duration: actividad.duration ?? 1,
       canJoin: actividad.canJoin ?? true,
@@ -143,6 +140,34 @@ export default function ActividadesPage() {
     }
   }
 
+  async function handleArchive(actividad: Actividad) {
+    if (!window.confirm(`Se archivara la actividad ${actividad.description ?? actividad.id}.`)) {
+      return;
+    }
+
+    setDeletingId(actividad.id);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      await deleteActividad(actividad.id);
+      if (editingActividadId === actividad.id) {
+        handleCancelEdit();
+      }
+      setSuccessMessage("Actividad archivada correctamente.");
+      await loadActividades();
+    } catch (error) {
+      console.error(error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se ha podido archivar la actividad."
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-100">
       <AppNav />
@@ -153,6 +178,22 @@ export default function ActividadesPage() {
           <p className="mt-2 text-slate-600">
             Gestion completa de talleres, eventos y actividades ofertadas por la asociacion.
           </p>
+          <div className="mt-4 flex items-center gap-3">
+            <label className="text-sm font-medium text-slate-700" htmlFor="actividades-status-filter">
+              Vista
+            </label>
+            <select
+              id="actividades-status-filter"
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as "active" | "archived")
+              }
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500"
+            >
+              <option value="active">Activas</option>
+              <option value="archived">Archivadas</option>
+            </select>
+          </div>
         </div>
 
         <form
@@ -326,7 +367,7 @@ export default function ActividadesPage() {
           </div>
         </form>
 
-        <div className="overflow-hidden rounded-2xl bg-white shadow">
+        <div className="overflow-x-auto rounded-2xl bg-white shadow">
           {loading && (
             <p className="p-6 text-sm text-slate-600">Cargando actividades...</p>
           )}
@@ -338,7 +379,7 @@ export default function ActividadesPage() {
           )}
 
           {!loading && !error && actividades.length > 0 && (
-            <table className="w-full border-collapse text-left text-sm">
+            <table className="min-w-[900px] w-full border-collapse text-left text-sm">
               <thead className="bg-slate-50 text-slate-700">
                 <tr>
                   <th className="px-4 py-3 font-semibold">ID</th>
@@ -346,6 +387,7 @@ export default function ActividadesPage() {
                   <th className="px-4 py-3 font-semibold">Tipo</th>
                   <th className="px-4 py-3 font-semibold">Fecha</th>
                   <th className="px-4 py-3 font-semibold">Capacidad</th>
+                  <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Acciones</th>
                 </tr>
               </thead>
@@ -365,6 +407,9 @@ export default function ActividadesPage() {
                     <td className="px-4 py-3 text-slate-600">
                       {actividad.capacity ?? "-"}
                     </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {actividad.status ?? "ACTIVE"}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <button
@@ -374,6 +419,16 @@ export default function ActividadesPage() {
                         >
                           Editar
                         </button>
+                        {actividad.status !== "ARCHIVED" && (
+                          <button
+                            type="button"
+                            onClick={() => handleArchive(actividad)}
+                            disabled={deletingId === actividad.id}
+                            className="rounded-lg border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {deletingId === actividad.id ? "Archivando..." : "Archivar"}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

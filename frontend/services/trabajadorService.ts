@@ -4,10 +4,18 @@ import type {
   IssuedAccessCredentials,
   TrabajadorAccessResponse,
 } from "@/types/access";
+import type { BajaRequestData } from "@/types/lifecycle";
 
-export async function getTrabajadores(): Promise<Trabajador[]> {
+export async function getTrabajadores(active?: boolean): Promise<Trabajador[]> {
   try {
-    return await apiFetch<Trabajador[]>("/trabajadores");
+    const searchParams = new URLSearchParams();
+
+    if (typeof active === "boolean") {
+      searchParams.set("active", String(active));
+    }
+
+    const query = searchParams.toString();
+    return await apiFetch<Trabajador[]>(query ? `/trabajadores?${query}` : "/trabajadores");
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       return [];
@@ -26,6 +34,7 @@ export interface TrabajadorFormData {
   birthDate: string;
   contractType: string;
   servicioId: number;
+  actividadId: number;
 }
 
 export async function createTrabajador(
@@ -50,9 +59,19 @@ export async function updateTrabajador(
   });
 }
 
-export async function deleteTrabajador(id: number): Promise<void> {
-  await apiFetch<void>(`/trabajadores/${id}`, {
-    method: "DELETE",
+export async function darDeBajaTrabajador(
+  id: number,
+  data: BajaRequestData
+): Promise<void> {
+  await apiFetch<void>(`/trabajadores/${id}/baja`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function reactivarTrabajador(id: number): Promise<void> {
+  await apiFetch<void>(`/trabajadores/${id}/reactivar`, {
+    method: "POST",
   });
 }
 

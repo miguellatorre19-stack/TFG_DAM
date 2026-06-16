@@ -44,12 +44,14 @@ public class Socio {
         @Column(nullable = true, name = "family_model")
         private String familyModel;
         @Column(name = "active")
-        private Boolean active;
+        private Boolean active = true;
+        @Column(columnDefinition = "TEXT")
+        private String reason;
         @Column(name = "entry_date")
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate entryDate = LocalDate.now();
-        @Column(nullable = true)
-        @Null
+        @Column(nullable = true, name = "out_date")
+        @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate outDate;
 
         @OneToMany(mappedBy = "socio")
@@ -60,6 +62,13 @@ public class Socio {
         @JoinColumn(name = "usuario_id", unique = true)
         @JsonIgnore
         private Usuario usuario;
+
+        @PrePersist
+        public void prePersist() {
+                if (active == null) {
+                        active = true;
+                }
+        }
 
         public Socio(long id, String dni, String name, String surname, String email, String address,
                      String phoneNumber, String familyModel, Boolean active, LocalDate entryDate,
@@ -73,6 +82,7 @@ public class Socio {
                 this.phoneNumber = phoneNumber;
                 this.familyModel = familyModel;
                 this.active = active;
+                this.reason = null;
                 this.entryDate = entryDate;
                 this.outDate = outDate;
                 this.participanteList = participanteList;

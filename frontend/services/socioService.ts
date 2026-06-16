@@ -1,6 +1,7 @@
 import { ApiError, apiFetch } from "./api";
 import type { Socio } from "@/types/socio";
 import type { IssuedAccessCredentials, SocioAccessResponse } from "@/types/access";
+import type { BajaRequestData } from "@/types/lifecycle";
 
 export interface SocioFormData {
   name: string;
@@ -13,9 +14,16 @@ export interface SocioFormData {
   entryDate: string;
 }
 
-export async function getSocios(): Promise<Socio[]> {
+export async function getSocios(active?: boolean): Promise<Socio[]> {
   try {
-    return await apiFetch<Socio[]>("/socios");
+    const searchParams = new URLSearchParams();
+
+    if (typeof active === "boolean") {
+      searchParams.set("active", String(active));
+    }
+
+    const query = searchParams.toString();
+    return await apiFetch<Socio[]>(query ? `/socios?${query}` : "/socios");
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       return [];
@@ -39,9 +47,19 @@ export async function updateSocio(id: number, data: SocioFormData): Promise<Soci
   });
 }
 
-export async function deleteSocio(id: number): Promise<void> {
-  return apiFetch<void>(`/socios/${id}`, {
-    method: "DELETE",
+export async function darDeBajaSocio(
+  id: number,
+  data: BajaRequestData
+): Promise<void> {
+  return apiFetch<void>(`/socios/${id}/baja`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function reactivarSocio(id: number): Promise<void> {
+  return apiFetch<void>(`/socios/${id}/reactivar`, {
+    method: "POST",
   });
 }
 

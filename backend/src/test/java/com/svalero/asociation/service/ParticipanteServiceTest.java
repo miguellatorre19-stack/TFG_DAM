@@ -2,6 +2,7 @@ package com.svalero.asociation.service;
 
 import com.svalero.asociation.dto.AccessCodeResponseDto;
 import com.svalero.asociation.dto.AccessCredentialsDto;
+import com.svalero.asociation.dto.BajaRequestDto;
 import com.svalero.asociation.dto.ParticipanteAccessResponseDto;
 import com.svalero.asociation.dto.ParticipanteDto;
 import com.svalero.asociation.dto.ParticipanteOutDto;
@@ -11,7 +12,7 @@ import com.svalero.asociation.model.Participante;
 import com.svalero.asociation.model.Socio;
 import com.svalero.asociation.model.Usuario;
 import com.svalero.asociation.repository.InscripcionActividadRepository;
-import com.svalero.asociation.repository.InscripcionServicioRepository;
+import com.svalero.asociation.repository.SolicitudServicioRepository;
 import com.svalero.asociation.repository.ParticipanteRepository;
 import com.svalero.asociation.repository.SocioRepository;
 import org.junit.jupiter.api.Test;
@@ -26,11 +27,13 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
@@ -59,7 +62,7 @@ class ParticipanteServiceTest {
     private InscripcionActividadRepository inscripcionActividadRepository;
 
     @Mock
-    private InscripcionServicioRepository inscripcionServicioRepository;
+    private SolicitudServicioRepository solicitudServicioRepository;
 
     @Test
     void testFindAll() {
@@ -246,29 +249,68 @@ class ParticipanteServiceTest {
     }
 
     @Test
-    void testDelete() {
+    void testDarDeBaja() {
         Participante participante = buildParticipante(1L, "77777777U", "Alberto", 1L);
         Usuario usuario = Usuario.builder().id(8L).email("email@email.com").build();
         participante.setUsuario(usuario);
         when(participanteRepository.findById(1L)).thenReturn(Optional.of(participante));
-        when(inscripcionActividadRepository.existsByParticipanteId(1L)).thenReturn(false);
-        when(inscripcionServicioRepository.existsByParticipanteId(1L)).thenReturn(false);
+        when(participanteRepository.save(participante)).thenReturn(participante);
 
-        participanteService.delete(1L);
+        participanteService.darDeBaja(1L, new BajaRequestDto("Cambio de situacion familiar", LocalDate.now().minusDays(1)));
 
         verify(participanteRepository).findById(1L);
-        verify(participanteRepository).delete(participante);
-        verify(accessUserService).deleteAccessUser(usuario);
+        assertFalse(participante.getActive());
+        assertNotNull(participante.getOutDate());
+        assertEquals(LocalDate.now().minusDays(1), participante.getOutDate());
+        assertEquals("Cambio de situacion familiar", participante.getReason());
+        verify(participanteRepository).save(participante);
+        verify(accessUserService).deactivateAccessUser(usuario);
+        verify(participanteRepository, never()).delete(participante);
     }
 
     @Test
-    void testDeleteNotFound() {
+    void testDarDeBajaNotFound() {
         when(participanteRepository.findById(100L)).thenReturn(Optional.empty());
 
-        assertThrows(ParticipanteNotFoundException.class, () -> participanteService.delete(100L));
+        assertThrows(ParticipanteNotFoundException.class, () -> participanteService.darDeBaja(100L, new BajaRequestDto("Motivo", LocalDate.now())));
 
         verify(participanteRepository).findById(100L);
-        verify(participanteRepository, never()).delete(any(Participante.class));
+        verify(participanteRepository, never()).save(any(Participante.class));
+    }
+
+    @Test
+    void testReactivate() {
+        Participante participante = buildParticipante(1L, "77777777U", "Alberto", 1L);
+        participante.setActive(false);
+        participante.setOutDate(LocalDate.now().minusDays(1));
+        participante.setReason("Baja voluntaria");
+        Usuario usuario = Usuario.builder().id(8L).email("email@email.com").active(false).build();
+        participante.setUsuario(usuario);
+
+        when(participanteRepository.findById(1L)).thenReturn(Optional.of(participante));
+        when(participanteRepository.save(participante)).thenReturn(participante);
+
+        participanteService.reactivar(1L);
+
+        assertTrue(participante.getActive());
+        assertNull(participante.getOutDate());
+        assertNull(participante.getReason());
+        verify(accessUserService).reactivateAccessUser(usuario);
+        verify(participanteRepository).save(participante);
+    }
+
+    @Test
+    void testReactivateFailsWhenSocioIsInactive() {
+        Participante participante = buildParticipante(1L, "77777777U", "Alberto", 1L);
+        participante.setActive(false);
+        participante.getSocio().setActive(false);
+
+        when(participanteRepository.findById(1L)).thenReturn(Optional.of(participante));
+
+        assertThrows(BusinessRuleException.class, () -> participanteService.reactivar(1L));
+
+        verify(participanteRepository, never()).save(any(Participante.class));
+        verify(accessUserService, never()).reactivateAccessUser(any());
     }
 
     private Participante buildParticipante(long id, String dni, String name, long socioId) {
@@ -283,6 +325,7 @@ class ParticipanteServiceTest {
         participante.setEntryDate(LocalDate.of(2025, 1, 1));
         participante.setNeeds("ninguna");
         participante.setTypeRel("hijo");
+        participante.setActive(true);
         Socio socio = new Socio();
         socio.setId(socioId);
         participante.setSocio(socio);

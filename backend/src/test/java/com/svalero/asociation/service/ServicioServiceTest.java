@@ -145,10 +145,13 @@ class ServicioServiceTest {
         
         Servicio servicio = new Servicio(1, "trabajo social", "anual", "ninguno", 40f, 3, null, null);
         when(servicioRepository.findById(servicio.getId())).thenReturn(Optional.of(servicio));
+        when(servicioRepository.save(servicio)).thenReturn(servicio);
 
         servicioService.delete(servicio.getId());
 
-        verify(servicioRepository, times(1)).delete(servicio);
+        assertEquals("ARCHIVED", servicio.getStatus());
+        verify(servicioRepository, times(1)).save(servicio);
+        verify(servicioRepository, never()).delete(servicio);
 
     }
 }

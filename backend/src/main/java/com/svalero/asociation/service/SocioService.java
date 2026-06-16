@@ -2,6 +2,7 @@ package com.svalero.asociation.service;
 
 import com.svalero.asociation.dto.AccessCredentialsDto;
 import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.BajaRequestDto;
 import com.svalero.asociation.dto.SocioAccessResponseDto;
 import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.exception.BusinessRuleException;
@@ -137,10 +138,53 @@ public class SocioService {
         );
     }
 
-    public void delete(long id) {
-        logger.info("Socio with ID: {} deleted successfully", id);
-        Socio socio = socioRepository.findById(id).orElseThrow(() -> new SocioNotFoundException("Socio con ID " + id + " no encontrado"));
-        socioRepository.delete(socio);
+    @Transactional
+    public void darDeBaja(long id, BajaRequestDto bajaRequest) {
+        Socio socio = socioRepository.findById(id)
+                .orElseThrow(() -> new SocioNotFoundException("Socio con ID " + id + " no encontrado"));
+
+        if (Boolean.FALSE.equals(socio.getActive())) {
+            throw new BusinessRuleException("El socio con ID " + id + " ya fue dado de baja");
+        }
+
+        LocalDate outDate = bajaRequest.getOutDate() != null ? bajaRequest.getOutDate() : LocalDate.now();
+        String reason = bajaRequest.getReason().trim();
+        socio.setActive(false);
+        socio.setOutDate(outDate);
+        socio.setReason(reason);
+        accessUserService.deactivateAccessUser(socio.getUsuario());
+
+        if (socio.getParticipanteList() != null) {
+            socio.getParticipanteList().forEach(participante -> {
+                if (Boolean.FALSE.equals(participante.getActive())) {
+                    return;
+                }
+                participante.setActive(false);
+                participante.setOutDate(outDate);
+                participante.setReason("Socio dado de baja: " + reason);
+                accessUserService.deactivateAccessUser(participante.getUsuario());
+            });
+        }
+
+        socioRepository.save(socio);
+        logger.info("Socio with ID: {} marked as inactive", id);
+    }
+
+    @Transactional
+    public void reactivar(long id) {
+        Socio socio = socioRepository.findById(id)
+                .orElseThrow(() -> new SocioNotFoundException("Socio con ID " + id + " no encontrado"));
+
+        if (Boolean.TRUE.equals(socio.getActive())) {
+            throw new BusinessRuleException("El socio con ID " + id + " ya esta activo");
+        }
+
+        socio.setActive(true);
+        socio.setOutDate(null);
+        socio.setReason(null);
+        accessUserService.reactivateAccessUser(socio.getUsuario());
+        socioRepository.save(socio);
+        logger.info("Socio with ID: {} reactivated", id);
     }
 
 }

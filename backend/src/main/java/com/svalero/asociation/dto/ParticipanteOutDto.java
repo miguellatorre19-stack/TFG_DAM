@@ -20,4 +20,7 @@ public class ParticipanteOutDto {
     private String needs;
     private String typeRel;
     private long socioID;
+    private Boolean active;
+    private String reason;
+    private LocalDate outDate;
 }

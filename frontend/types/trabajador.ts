@@ -9,6 +9,14 @@ export interface Trabajador {
   entryDate?: string;
   contractType?: string;
   active?: boolean;
+  outDate?: string | null;
+  reason?: string | null;
+  actividadId?: number;
+  actividadOutDto?: {
+    id: number;
+    description?: string;
+    dayActivity?: string;
+  };
   servicioId?: number;
   servicioOutDto?: {
     id: number;

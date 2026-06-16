@@ -8,9 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.io.Serial;
 import java.time.LocalDate;
-import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -49,6 +47,13 @@ public class Trabajador {
     @Column
     @NotBlank(message = "necesita una tipo de contrato")
     private String contractType;
+    @Column(columnDefinition = "TEXT")
+    private String reason;
+    @Column(nullable = false)
+    private Boolean active = true;
+    @Column(name = "out_date")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate outDate;
 
     @ManyToOne
     @JoinColumn(name="actividad_id")
@@ -63,6 +68,13 @@ public class Trabajador {
     @JsonIgnore
     private Usuario usuario;
 
+    @PrePersist
+    public void prePersist() {
+        if (active == null) {
+            active = true;
+        }
+    }
+
     public Trabajador(long id, String dni, String name, String surname, String email, String phoneNumber,
             LocalDate birthDate, LocalDate entryDate, String contractType, Actividad actividad, Servicio servicios) {
         this.id = id;
@@ -74,6 +86,9 @@ public class Trabajador {
         this.birthDate = birthDate;
         this.entryDate = entryDate;
         this.contractType = contractType;
+        this.reason = null;
+        this.active = true;
+        this.outDate = null;
         this.actividad = actividad;
         this.servicios = servicios;
     }

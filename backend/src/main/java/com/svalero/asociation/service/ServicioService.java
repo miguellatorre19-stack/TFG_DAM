@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.modelmapper.ModelMapper;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -25,18 +26,28 @@ public class ServicioService {
     private final Logger logger = LoggerFactory.getLogger(ServicioService.class);
 
 
-    public List<Servicio> findAll(String periodicity, Integer capacity, Float duration){
-        List<Servicio> servicios = servicioRepository.findByFilters(periodicity, capacity, duration);
-        logger.info("Searching with filters: {} {} {}", periodicity, capacity, duration);
+    public List<Servicio> findAll(String periodicity, Integer capacity, Float duration, Boolean archived){
+        List<Servicio> servicios = archived == null
+                ? servicioRepository.findByFilters(periodicity, capacity, duration)
+                : servicioRepository.findByFilters(periodicity, capacity, duration, archived);
+        logger.info("Searching with filters: {} {} {} {}", periodicity, capacity, duration, archived);
         return servicios;
     }
 
-    public List<ServicioOutDto> findAllDto(String periodicity, Integer capacity, Float duration){
-        List<Servicio> servicios = findAll(periodicity, capacity, duration);
+    public List<Servicio> findAll(String periodicity, Integer capacity, Float duration){
+        return findAll(periodicity, capacity, duration, null);
+    }
+
+    public List<ServicioOutDto> findAllDto(String periodicity, Integer capacity, Float duration, Boolean archived){
+        List<Servicio> servicios = findAll(periodicity, capacity, duration, archived);
 
         return servicios.stream()
                 .map(this::toOutDto)
                 .toList();
+    }
+
+    public List<ServicioOutDto> findAllDto(String periodicity, Integer capacity, Float duration){
+        return findAllDto(periodicity, capacity, duration, null);
     }
 
     private ServicioOutDto toOutDto(Servicio servicio) {
@@ -48,6 +59,7 @@ public class ServicioService {
         dto.setRequisites(servicio.getRequisites());
         dto.setDuration(servicio.getDuration());
         dto.setCapacity(servicio.getCapacity());
+        dto.setStatus(servicio.getStatus());
 
         return dto;
     }
@@ -91,10 +103,20 @@ public class ServicioService {
     }
 
 
+    @Transactional
     public void delete(long id){
         Servicio servicio = servicioRepository.findById(id).orElseThrow(()-> new ServicioNotFoundException("Servicio con la ID:"+ id+ "no encontrado"));
-        logger.info("Servicio with ID: {} deleted successfully", id);
-        servicioRepository.delete(servicio);
+
+        if ("ARCHIVED".equalsIgnoreCase(servicio.getStatus())) {
+            throw new com.svalero.asociation.exception.BusinessRuleException("El servicio con ID " + id + " ya fue archivado");
+        }
+
+        if (servicio.getTrabajadoresAsignados() != null) {
+            servicio.getTrabajadoresAsignados().forEach(trabajador -> trabajador.setServicios(null));
+        }
+        servicio.setStatus("ARCHIVED");
+        servicioRepository.save(servicio);
+        logger.info("Servicio with ID: {} archived successfully", id);
     }
 
     public Servicio findModelById(long id) {

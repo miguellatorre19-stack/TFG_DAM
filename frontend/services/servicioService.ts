@@ -2,7 +2,7 @@ import { ApiError, apiFetch } from "./api";
 import type { Servicio } from "@/types/servicio";
 import type {
   InscripcionPayload,
-  InscripcionServicio,
+  SolicitudServicio,
 } from "@/types/inscripcion";
 
 export interface ServicioFormData {
@@ -13,9 +13,16 @@ export interface ServicioFormData {
   capacity: number;
 }
 
-export async function getServicios(): Promise<Servicio[]> {
+export async function getServicios(archived?: boolean): Promise<Servicio[]> {
   try {
-    return await apiFetch<Servicio[]>("/servicios");
+    const searchParams = new URLSearchParams();
+
+    if (typeof archived === "boolean") {
+      searchParams.set("archived", String(archived));
+    }
+
+    const query = searchParams.toString();
+    return await apiFetch<Servicio[]>(query ? `/servicios?${query}` : "/servicios");
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       return [];
@@ -48,40 +55,40 @@ export async function deleteServicio(id: number): Promise<void> {
   });
 }
 
-export async function getInscripcionesServicio(
+export async function getSolicitudesServicio(
   servicioId: number
-): Promise<InscripcionServicio[]> {
-  return apiFetch<InscripcionServicio[]>(`/servicios/${servicioId}/inscripciones`);
+): Promise<SolicitudServicio[]> {
+  return apiFetch<SolicitudServicio[]>(`/servicios/${servicioId}/solicitudes`);
 }
 
-export async function inscribirServicio(
+export async function solicitarServicio(
   servicioId: number,
   participanteId: number
 ): Promise<void> {
-  return createInscripcionServicio(servicioId, {
+  return createSolicitudServicio(servicioId, {
     participanteId,
-    state: "ENVIADA",
+    state: "PENDING",
     price: 0,
   });
 }
 
-export async function createInscripcionServicio(
+export async function createSolicitudServicio(
   servicioId: number,
   data: InscripcionPayload
 ): Promise<void> {
-  await apiFetch<void>(`/servicios/${servicioId}/inscripciones`, {
+  await apiFetch<void>(`/servicios/${servicioId}/solicitudes`, {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-export async function updateInscripcionServicio(
+export async function updateSolicitudServicio(
   servicioId: number,
-  inscripcionId: number,
+  solicitudId: number,
   data: InscripcionPayload
-): Promise<InscripcionServicio> {
-  return apiFetch<InscripcionServicio>(
-    `/servicios/${servicioId}/inscripciones/${inscripcionId}`,
+): Promise<SolicitudServicio> {
+  return apiFetch<SolicitudServicio>(
+    `/servicios/${servicioId}/solicitudes/${solicitudId}`,
     {
       method: "PUT",
       body: JSON.stringify(data),
@@ -89,11 +96,11 @@ export async function updateInscripcionServicio(
   );
 }
 
-export async function deleteInscripcionServicio(
+export async function cancelarSolicitudServicio(
   servicioId: number,
-  inscripcionId: number
+  solicitudId: number
 ): Promise<void> {
-  await apiFetch<void>(`/servicios/${servicioId}/inscripciones/${inscripcionId}`, {
+  await apiFetch<void>(`/servicios/${servicioId}/solicitudes/${solicitudId}`, {
     method: "DELETE",
   });
 }
