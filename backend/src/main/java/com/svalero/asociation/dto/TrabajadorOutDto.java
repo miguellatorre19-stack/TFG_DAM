@@ -22,6 +22,7 @@ public class TrabajadorOutDto {
     private Boolean active;
     private LocalDate outDate;
     private String reason;
+    private ActividadOutDto actividadOutDto;
     private ServicioOutDto servicioOutDto;
 
     public TrabajadorOutDto(long id, String dni, String name, String surname, String email, String phoneNumber,
@@ -37,6 +38,7 @@ public class TrabajadorOutDto {
         this.contractType = contractType;
         this.active = true;
         this.outDate = null;
+        this.actividadOutDto = null;
         this.servicioOutDto = servicioOutDto;
     }
 }

@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.modelmapper.ModelMapper;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -102,6 +103,7 @@ public class ServicioService {
     }
 
 
+    @Transactional
     public void delete(long id){
         Servicio servicio = servicioRepository.findById(id).orElseThrow(()-> new ServicioNotFoundException("Servicio con la ID:"+ id+ "no encontrado"));
 
@@ -109,6 +111,9 @@ public class ServicioService {
             throw new com.svalero.asociation.exception.BusinessRuleException("El servicio con ID " + id + " ya fue archivado");
         }
 
+        if (servicio.getTrabajadoresAsignados() != null) {
+            servicio.getTrabajadoresAsignados().forEach(trabajador -> trabajador.setServicios(null));
+        }
         servicio.setStatus("ARCHIVED");
         servicioRepository.save(servicio);
         logger.info("Servicio with ID: {} archived successfully", id);

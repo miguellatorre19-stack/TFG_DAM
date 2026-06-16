@@ -6,6 +6,8 @@ import com.svalero.asociation.dto.BajaRequestDto;
 import com.svalero.asociation.dto.TrabajadorAccessResponseDto;
 import com.svalero.asociation.dto.TrabajadorDto;
 import com.svalero.asociation.dto.TrabajadorOutDto;
+import com.svalero.asociation.exception.BusinessRuleException;
+import com.svalero.asociation.model.Actividad;
 import com.svalero.asociation.model.Servicio;
 import com.svalero.asociation.model.Trabajador;
 import com.svalero.asociation.model.Usuario;
@@ -37,6 +39,8 @@ public class TrabajadorServiceTest{
     private ModelMapper mapper;
     @Mock
     private ServicioService servicioService;
+    @Mock
+    private ActividadService actividadService;
 
     @Mock
     private AccessUserService accessUserService;
@@ -175,6 +179,48 @@ public class TrabajadorServiceTest{
     }
 
     @Test
+    void testAddDtoWithAccess_AssignsActividad() {
+        TrabajadorDto trabajadorDto = new TrabajadorDto(
+                "77777777U",
+                "Hector",
+                "Aladia",
+                "email@email",
+                "888-566-323",
+                LocalDate.now().minusDays(2),
+                null,
+                "Tiempo Parcial",
+                1L
+        );
+        trabajadorDto.setActividadId(7L);
+        Servicio servicio = new Servicio(1, "trabajo social", "anual", "ninguno", 40f, 3, null, null);
+        Actividad actividad = new Actividad();
+        actividad.setId(7L);
+        actividad.setDescription("Taller");
+        actividad.setStatus("ACTIVE");
+        Trabajador trabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now().minusDays(2), null, "Tiempo Parcial", null, null);
+        Usuario usuario = Usuario.builder()
+                .id(12L)
+                .name("Hector Aladia")
+                .email("email@email")
+                .password("encoded-password")
+                .active(true)
+                .build();
+
+        when(mapper.map(trabajadorDto, Trabajador.class)).thenReturn(trabajador);
+        when(trabajadorRepository.existsBydni("77777777U")).thenReturn(false);
+        when(servicioService.findById(1L)).thenReturn(servicio);
+        when(actividadService.findById(7L)).thenReturn(actividad);
+        when(accessUserService.createAccessUser("Hector Aladia", "email@email", "TRABAJADOR"))
+                .thenReturn(new AccessCredentialsDto(usuario, "ABCDE-23456"));
+        when(trabajadorRepository.save(any(Trabajador.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TrabajadorAccessResponseDto response = trabajadorService.addDtoWithAccess(trabajadorDto, 1L);
+
+        assertEquals(7L, response.getTrabajador().getActividadOutDto().getId());
+        verify(actividadService).findById(7L);
+    }
+
+    @Test
     void testModify() {
 
         Trabajador oldTrabajador =   new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now(), LocalDate.now(), "Tiempo Parcial", null, null);
@@ -230,6 +276,73 @@ public class TrabajadorServiceTest{
         assertNull(result.getServicios());
         verify(servicioService, never()).findById(anyLong());
         verify(trabajadorRepository, times(1)).save(oldTrabajador);
+    }
+
+    @Test
+    void testModify_AssignsActividad() {
+        Actividad oldActividad = new Actividad();
+        oldActividad.setId(1L);
+        oldActividad.setStatus("ACTIVE");
+        Actividad newActividad = new Actividad();
+        newActividad.setId(2L);
+        newActividad.setDescription("Taller");
+        newActividad.setStatus("ACTIVE");
+
+        Trabajador oldTrabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now().minusDays(1), LocalDate.now(), "Tiempo Parcial", oldActividad, null);
+        Trabajador wantedTrabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now().minusDays(1), LocalDate.now(), "Tiempo Parcial", new Actividad(), null);
+        wantedTrabajador.getActividad().setId(2L);
+
+        when(trabajadorRepository.findById(oldTrabajador.getId())).thenReturn(Optional.of(oldTrabajador));
+        when(actividadService.findById(2L)).thenReturn(newActividad);
+        when(trabajadorRepository.save(oldTrabajador)).thenReturn(oldTrabajador);
+
+        Trabajador result = trabajadorService.modify(oldTrabajador.getId(), wantedTrabajador);
+
+        assertNotNull(result.getActividad());
+        assertEquals(2L, result.getActividad().getId());
+        verify(actividadService).findById(2L);
+    }
+
+    @Test
+    void testFindDtoById_HidesArchivedActividad() {
+        Actividad actividad = new Actividad();
+        actividad.setId(5L);
+        actividad.setDescription("Archivada");
+        actividad.setStatus("ARCHIVED");
+        Trabajador trabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now(), LocalDate.now(), "Tiempo Parcial", actividad, null);
+
+        when(trabajadorRepository.findById(1L)).thenReturn(Optional.of(trabajador));
+
+        TrabajadorOutDto result = trabajadorService.findDtoById(1L);
+
+        assertNull(result.getActividadOutDto());
+    }
+
+    @Test
+    void testModifyDtoRejectsArchivedActividad() {
+        TrabajadorDto trabajadorDto = new TrabajadorDto(
+                "77777777U",
+                "Hector",
+                "Aladia",
+                "email@email",
+                "888-566-323",
+                LocalDate.now().minusDays(2),
+                LocalDate.now(),
+                "Tiempo Parcial",
+                1L
+        );
+        trabajadorDto.setActividadId(7L);
+        Trabajador trabajador = new Trabajador();
+        Actividad archivedActividad = new Actividad();
+        archivedActividad.setId(7L);
+        archivedActividad.setStatus("ARCHIVED");
+        Servicio servicio = new Servicio(1, "trabajo social", "anual", "ninguno", 40f, 3, null, null);
+
+        when(mapper.map(trabajadorDto, Trabajador.class)).thenReturn(trabajador);
+        when(servicioService.findById(1L)).thenReturn(servicio);
+        when(actividadService.findById(7L)).thenReturn(archivedActividad);
+
+        assertThrows(BusinessRuleException.class, () -> trabajadorService.modifyDto(1L, trabajadorDto));
     }
 
     @Test

@@ -3,7 +3,9 @@ package com.svalero.asociation.service;
 import com.svalero.asociation.dto.ActividadDto;
 import com.svalero.asociation.dto.ActividadOutDto;
 import com.svalero.asociation.exception.ActividadNotFoundException;
+import com.svalero.asociation.exception.BusinessRuleException;
 import com.svalero.asociation.model.Actividad;
+import com.svalero.asociation.model.Trabajador;
 import com.svalero.asociation.repository.ActividadRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +21,7 @@ import java.util.Optional;
 
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -184,6 +187,9 @@ class ActividadServiceTest {
     @Test
     void testDelete() {
         Actividad actividad = buildActividad(1L, "Club de lectura");
+        Trabajador trabajador = new Trabajador();
+        trabajador.setActividad(actividad);
+        actividad.setTrabajadoresAsignados(List.of(trabajador));
         when(actividadRepository.findById(1L)).thenReturn(Optional.of(actividad));
         when(actividadRepository.save(actividad)).thenReturn(actividad);
 
@@ -191,8 +197,21 @@ class ActividadServiceTest {
 
         verify(actividadRepository).findById(1L);
         assertEquals("ARCHIVED", actividad.getStatus());
+        assertNull(trabajador.getActividad());
         verify(actividadRepository).save(actividad);
         verify(actividadRepository, never()).delete(actividad);
+    }
+
+    @Test
+    void testDeleteAlreadyArchived() {
+        Actividad actividad = buildActividad(1L, "Club de lectura");
+        actividad.setStatus("ARCHIVED");
+        when(actividadRepository.findById(1L)).thenReturn(Optional.of(actividad));
+
+        assertThrows(BusinessRuleException.class, () -> actividadService.delete(1L));
+
+        verify(actividadRepository).findById(1L);
+        verify(actividadRepository, never()).save(any(Actividad.class));
     }
 
     @Test

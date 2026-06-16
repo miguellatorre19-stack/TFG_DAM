@@ -3,6 +3,7 @@ package com.svalero.asociation.service;
 import com.svalero.asociation.dto.ActividadDto;
 import com.svalero.asociation.dto.ActividadOutDto;
 import com.svalero.asociation.exception.ActividadNotFoundException;
+import com.svalero.asociation.exception.BusinessRuleException;
 import com.svalero.asociation.model.Actividad;
 import com.svalero.asociation.repository.ActividadRepository;
 import org.modelmapper.ModelMapper;
@@ -10,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -79,13 +81,17 @@ public class ActividadService {
         return actividadRepository.save(oldactividad);
     }
 
+    @Transactional
     public void delete(long id) {
         Actividad actividad = actividadRepository.findById(id).orElseThrow(() -> new ActividadNotFoundException("Actividad con ID:" + id + "not found"));
 
         if ("ARCHIVED".equalsIgnoreCase(actividad.getStatus())) {
-            throw new com.svalero.asociation.exception.BusinessRuleException("La actividad con ID " + id + " ya fue archivada");
+            throw new BusinessRuleException("La actividad con ID " + id + " ya fue archivada");
         }
 
+        if (actividad.getTrabajadoresAsignados() != null) {
+            actividad.getTrabajadoresAsignados().forEach(trabajador -> trabajador.setActividad(null));
+        }
         actividad.setStatus("ARCHIVED");
         actividadRepository.save(actividad);
         logger.info("Actividad with ID: {} archived successfully", id);
