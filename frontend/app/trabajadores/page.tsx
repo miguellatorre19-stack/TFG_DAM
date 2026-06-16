@@ -6,6 +6,7 @@ import AppNav from "@/components/AppNav";
 import BajaDialog from "@/components/BajaDialog";
 import CredentialsNotice from "@/components/CredentialsNotice";
 import { canAccessAdminPanel, getUser } from "@/services/authService";
+import { getActividades } from "@/services/actividadService";
 import { getServicios } from "@/services/servicioService";
 import {
   createTrabajador,
@@ -17,6 +18,7 @@ import {
   type TrabajadorFormData,
 } from "@/services/trabajadorService";
 import type { IssuedAccessCredentials } from "@/types/access";
+import type { Actividad } from "@/types/actividad";
 import type { Servicio } from "@/types/servicio";
 import type { Trabajador } from "@/types/trabajador";
 
@@ -30,6 +32,7 @@ function createEmptyForm(): TrabajadorFormData {
     birthDate: "",
     contractType: "",
     servicioId: 0,
+    actividadId: 0,
   };
 }
 
@@ -37,6 +40,7 @@ export default function TrabajadoresPage() {
   const router = useRouter();
 
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
+  const [actividades, setActividades] = useState<Actividad[]>([]);
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [statusFilter, setStatusFilter] = useState<"active" | "inactive">("active");
   const [formData, setFormData] = useState<TrabajadorFormData>(() =>
@@ -62,12 +66,14 @@ export default function TrabajadoresPage() {
     setError("");
 
     try {
-      const [trabajadoresData, serviciosData] = await Promise.all([
+      const [trabajadoresData, serviciosData, actividadesData] = await Promise.all([
         getTrabajadores(nextFilter === "active"),
         getServicios(false),
+        getActividades(false),
       ]);
       setTrabajadores(trabajadoresData);
       setServicios(serviciosData);
+      setActividades(actividadesData);
     } catch (error) {
       console.error(error);
       setError("No se han podido cargar los trabajadores.");
@@ -120,6 +126,7 @@ export default function TrabajadoresPage() {
       birthDate: trabajador.birthDate ?? "",
       contractType: trabajador.contractType ?? "",
       servicioId: trabajador.servicioOutDto?.id ?? trabajador.servicioId ?? 0,
+      actividadId: trabajador.actividadOutDto?.id ?? trabajador.actividadId ?? 0,
     });
 
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -347,6 +354,26 @@ export default function TrabajadoresPage() {
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">
+                Actividad asignada
+              </span>
+              <select
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.actividadId}
+                onChange={(event) =>
+                  handleInputChange("actividadId", Number(event.target.value))
+                }
+              >
+                <option value={0}>Sin actividad asignada</option>
+                {actividades.map((actividad) => (
+                  <option key={actividad.id} value={actividad.id}>
+                    {actividad.description || `Actividad ${actividad.id}`}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
                 Tipo de contrato
               </span>
               <input
@@ -507,13 +534,14 @@ export default function TrabajadoresPage() {
           )}
 
           {!loading && !error && trabajadores.length > 0 && (
-            <table className="min-w-[1180px] w-full border-collapse text-left text-sm">
+            <table className="min-w-[1320px] w-full border-collapse text-left text-sm">
               <thead className="bg-slate-50 text-slate-700">
                 <tr>
                   <th className="px-4 py-3 font-semibold">ID</th>
                   <th className="px-4 py-3 font-semibold">Nombre</th>
                   <th className="px-4 py-3 font-semibold">Email</th>
                   <th className="px-4 py-3 font-semibold">Telefono</th>
+                  <th className="px-4 py-3 font-semibold">Actividad</th>
                   <th className="px-4 py-3 font-semibold">Servicio</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Fecha baja</th>
@@ -535,6 +563,9 @@ export default function TrabajadoresPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       {trabajador.phoneNumber ?? "-"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {trabajador.actividadOutDto?.description ?? "-"}
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       {trabajador.servicioOutDto?.description ?? "-"}

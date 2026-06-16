@@ -34,6 +34,7 @@ export interface TrabajadorFormData {
   birthDate: string;
   contractType: string;
   servicioId: number;
+  actividadId: number;
 }
 
 export async function createTrabajador(
