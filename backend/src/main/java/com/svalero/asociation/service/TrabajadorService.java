@@ -273,7 +273,7 @@ public class TrabajadorService {
         dto.setContractType(trabajador.getContractType());
         dto.setActive(trabajador.getActive());
         dto.setOutDate(trabajador.getOutDate());
-        dto.setReason(trabajador.getReason());
+        dto.setReason(Boolean.FALSE.equals(trabajador.getActive()) ? trabajador.getReason() : null);
         dto.setActividadOutDto(toActividadOutDto(trabajador.getActividad()));
         dto.setServicioOutDto(toServicioOutDto(trabajador.getServicios()));
         return dto;

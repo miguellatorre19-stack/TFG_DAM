@@ -39,8 +39,10 @@ public class SocioService {
         List<Socio> socios = socioRepository.findByFilters(familyModel, active, entryDate);
 
         logger.info("Searching with filters: {} {} {}", familyModel, active, entryDate);
-        List<SocioDto> sociosDto = modelMapper.map(socios, new TypeToken<List<SocioDto>>() {
-        }.getType());
+        List<SocioDto> sociosDto = modelMapper.<List<SocioDto>>map(socios, new TypeToken<List<SocioDto>>() {
+        }.getType()).stream()
+                .map(this::hideReasonForActive)
+                .toList();
 
         return sociosDto;
     }
@@ -50,7 +52,7 @@ public class SocioService {
         Socio socioSelected = socioRepository.findById(id).orElseThrow(() -> new SocioNotFoundException("Socio con ID " + id + " no encontrado"));
         logger.debug("Fetching socio with ID: {}", id);
         SocioDto socioDto = modelMapper.map(socioSelected, SocioDto.class);
-        return socioDto;
+        return hideReasonForActive(socioDto);
     }
 
     public Socio add(Socio socio) {
@@ -86,7 +88,7 @@ public class SocioService {
 
         SocioDto socioDto = modelMapper.map(savedSocio, SocioDto.class);
         return new SocioAccessResponseDto(
-                socioDto,
+                hideReasonForActive(socioDto),
                 savedUsuario.getId(),
                 savedUsuario.getEmail(),
                 credentials.getInitialPassword()
@@ -185,6 +187,13 @@ public class SocioService {
         accessUserService.reactivateAccessUser(socio.getUsuario());
         socioRepository.save(socio);
         logger.info("Socio with ID: {} reactivated", id);
+    }
+
+    private SocioDto hideReasonForActive(SocioDto socioDto) {
+        if (Boolean.TRUE.equals(socioDto.getActive())) {
+            socioDto.setReason(null);
+        }
+        return socioDto;
     }
 
 }

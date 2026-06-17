@@ -212,7 +212,7 @@ public class ParticipanteService {
         dto.setTypeRel(participante.getTypeRel());
         dto.setSocioID(participante.getSocio() != null ? participante.getSocio().getId() : 0);
         dto.setActive(participante.getActive());
-        dto.setReason(participante.getReason());
+        dto.setReason(Boolean.FALSE.equals(participante.getActive()) ? participante.getReason() : null);
         dto.setOutDate(participante.getOutDate());
         return dto;
     }

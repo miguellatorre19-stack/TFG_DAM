@@ -1,7 +1,7 @@
 package com.svalero.asociation.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.svalero.asociation.model.Participante;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
@@ -39,26 +39,14 @@ public class SocioDto {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate outDate;
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String reason;
 
     private List<ParticipanteDto> participanteDtoList;
 
     public SocioDto(long id, String dni, String name, String surname, String email, String phoneNumber,
             Boolean active, String familyModel, LocalDate entryDate, List<ParticipanteDto> participanteDtoList) {
-        this.id = id;
-        this.dni = dni;
-        this.name = name;
-        this.surname = surname;
-        this.email = email;
-        this.phoneNumber = phoneNumber;
-        this.active = active;
-        this.familyModel = familyModel;
-        this.entryDate = entryDate;
-        this.outDate = null;
-        this.participanteDtoList = participanteDtoList;
-    }
-
-    public long getId(){
-        return id;
+        this(id, dni, name, surname, email, phoneNumber, active, familyModel, entryDate, null, null,
+                participanteDtoList);
     }
 }

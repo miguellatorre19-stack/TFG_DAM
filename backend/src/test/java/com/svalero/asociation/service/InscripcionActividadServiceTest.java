@@ -38,37 +38,33 @@ class InscripcionActividadServiceTest {
     private ModelMapper modelMapper;
 
     @Test
-    void inscribirThrowsWhenActividadDoesNotAllowRegistrations() {
+    void inscribirThrowsWhenParticipanteAlreadyEnrolled() {
         Actividad actividad = new Actividad();
         actividad.setId(1L);
-        actividad.setCanJoin(false);
-        actividad.setCapacity(10);
 
-        when(inscripcionActividadRepository.existsByActividadIdAndParticipanteId(1L, 2L)).thenReturn(false);
-        when(actividadRepository.findById(1L)).thenReturn(Optional.of(actividad));
+        when(inscripcionActividadRepository.existsByActividadIdAndParticipanteId(1L, 2L)).thenReturn(true);
 
         assertThrows(BusinessRuleException.class,
                 () -> inscripcionActividadService.inscribir(1L, 2L, "ENVIADA", 0));
 
+        verify(actividadRepository, never()).findById(1L);
         verify(participanteRepository, never()).findById(2L);
         verify(inscripcionActividadRepository, never()).save(org.mockito.ArgumentMatchers.any());
     }
 
     @Test
-    void inscribirThrowsWhenActividadIsFull() {
+    void inscribirThrowsWhenParticipanteDoesNotExist() {
         Actividad actividad = new Actividad();
         actividad.setId(1L);
-        actividad.setCanJoin(true);
-        actividad.setCapacity(1);
 
         when(inscripcionActividadRepository.existsByActividadIdAndParticipanteId(1L, 2L)).thenReturn(false);
         when(actividadRepository.findById(1L)).thenReturn(Optional.of(actividad));
-        when(inscripcionActividadRepository.countByActividadId(1L)).thenReturn(1L);
+        when(participanteRepository.findById(2L)).thenReturn(Optional.empty());
 
-        assertThrows(BusinessRuleException.class,
+        assertThrows(com.svalero.asociation.exception.ParticipanteNotFoundException.class,
                 () -> inscripcionActividadService.inscribir(1L, 2L, "ENVIADA", 0));
 
-        verify(participanteRepository, never()).findById(2L);
+        verify(participanteRepository).findById(2L);
         verify(inscripcionActividadRepository, never()).save(org.mockito.ArgumentMatchers.any());
     }
 }

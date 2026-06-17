@@ -1,5 +1,6 @@
 package com.svalero.asociation.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,6 +22,7 @@ public class ParticipanteOutDto {
     private String typeRel;
     private long socioID;
     private Boolean active;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String reason;
     private LocalDate outDate;
 }
