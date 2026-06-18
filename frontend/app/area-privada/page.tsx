@@ -2,11 +2,12 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMe, getUser, logout } from "@/services/authService";
+import { getMe, getMyRequests, getUser, logout } from "@/services/authService";
 import { getActividades, inscribirActividad } from "@/services/actividadService";
 import { getServicios, solicitarServicio } from "@/services/servicioService";
 import type { LoginResponse, MeResponse } from "@/types/auth";
 import type { Actividad } from "@/types/actividad";
+import type { PrivateRequest } from "@/types/privateRequest";
 import type { Servicio } from "@/types/servicio";
 
 type SectionId = "inicio" | "actividades" | "servicios" | "solicitudes" | "ayuda";
@@ -20,14 +21,6 @@ interface SelectedItem {
   date?: string;
   duration?: number;
   capacity?: number;
-}
-
-interface LocalRequest {
-  id: string;
-  kind: ItemKind;
-  title: string;
-  status: "Enviada" | "No enviada";
-  createdAt: string;
 }
 
 interface SubmissionFeedback {
@@ -45,9 +38,25 @@ const sections: Array<{ id: SectionId; label: string; helper: string }> = [
 ];
 
 const statusDescription = {
-  Enviada: "La asociacion ha recibido la solicitud.",
-  "No enviada": "La solicitud no se pudo completar. Puedes intentarlo de nuevo.",
-};
+  ENVIADA: "La asociacion ha recibido la solicitud.",
+  PENDING: "La asociacion ha recibido la solicitud y esta pendiente de revision.",
+  ACTIVE: "La solicitud sigue activa.",
+  CANCELLED: "La solicitud ha sido cancelada.",
+} as const;
+
+const statusLabel = {
+  ENVIADA: "Enviada",
+  PENDING: "Pendiente",
+  ACTIVE: "Activa",
+  CANCELLED: "Cancelada",
+} as const;
+
+const statusClassName = {
+  ENVIADA: "bg-[#edf7ef] text-[#244c35]",
+  PENDING: "bg-[#fff5dd] text-[#785b12]",
+  ACTIVE: "bg-[#edf7ef] text-[#244c35]",
+  CANCELLED: "bg-[#fff4ef] text-[#703729]",
+} as const;
 
 export default function PrivateAreaPage() {
   const router = useRouter();
@@ -70,7 +79,8 @@ export default function PrivateAreaPage() {
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState("");
-  const [requests, setRequests] = useState<LocalRequest[]>([]);
+  const [requests, setRequests] = useState<PrivateRequest[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
   const [submissionFeedback, setSubmissionFeedback] = useState<SubmissionFeedback | null>(null);
 
   useEffect(() => {
@@ -85,17 +95,16 @@ export default function PrivateAreaPage() {
       setUser(currentUser);
       const storedLowStimulus = localStorage.getItem("private-low-stimulus") === "true";
       const storedLargeText = localStorage.getItem("private-large-text") === "true";
-      const storedRequests = localStorage.getItem("private-requests");
 
       setLowStimulus(storedLowStimulus);
       setLargeText(storedLargeText);
-      setRequests(storedRequests ? JSON.parse(storedRequests) : []);
 
       async function loadContent() {
-        const [meResult, activityResult, serviceResult] = await Promise.allSettled([
+        const [meResult, activityResult, serviceResult, requestsResult] = await Promise.allSettled([
           getMe(),
           getActividades(),
           getServicios(),
+          getMyRequests(),
         ]);
 
         if (meResult.status === "fulfilled") {
@@ -113,10 +122,15 @@ export default function PrivateAreaPage() {
           setServicios(serviceResult.value);
         }
 
+        if (requestsResult.status === "fulfilled") {
+          setRequests(requestsResult.value);
+        }
+
         if (
           meResult.status === "rejected" ||
           activityResult.status === "rejected" ||
-          serviceResult.status === "rejected"
+          serviceResult.status === "rejected" ||
+          requestsResult.status === "rejected"
         ) {
           setLoadError(
             "No se ha podido cargar todo el contenido. La pantalla mostrara la informacion disponible."
@@ -124,6 +138,7 @@ export default function PrivateAreaPage() {
         }
 
         setLoading(false);
+        setRequestsLoading(false);
       }
 
       loadContent();
@@ -238,23 +253,21 @@ export default function PrivateAreaPage() {
         await solicitarServicio(selectedItem.id, parsedParticipantId);
       }
 
-      const request: LocalRequest = {
-        id: `SOL-${Date.now().toString().slice(-6)}`,
-        kind: selectedItem.kind,
-        title: selectedItem.title,
-        status: "Enviada",
-        createdAt: new Date().toLocaleDateString("es-ES"),
-      };
-      const nextRequests = [request, ...requests];
-      setRequests(nextRequests);
-      localStorage.setItem("private-requests", JSON.stringify(nextRequests));
-      setConfirmation(
-        `Solicitud ${request.id} enviada. La asociacion revisara la informacion.`
-      );
+      try {
+        const nextRequests = await getMyRequests();
+        setRequests(nextRequests);
+      } catch {
+        setLoadError(
+          "La solicitud se ha enviado, pero no se ha podido actualizar el listado de solicitudes en este momento."
+        );
+      }
+
+      setConfirmation("Solicitud enviada. La asociacion revisara la informacion.");
       setSubmissionFeedback({
         status: "success",
         title: "Solicitud enviada correctamente",
-        message: `La solicitud ${request.id} ha quedado registrada. La asociacion revisara la informacion y te respondera mas adelante.`,
+        message:
+          "La solicitud ha quedado registrada para este participante. La asociacion la revisara y te respondera mas adelante.",
       });
       setFormError("");
       setWizardStep(3);
@@ -435,7 +448,7 @@ export default function PrivateAreaPage() {
               actividadesCount={actividades.length}
               serviciosCount={servicios.length}
               requestsCount={requests.length}
-              loading={loading}
+              loading={loading || requestsLoading}
               onGoToActivities={() => setActiveSection("actividades")}
               onGoToServices={() => setActiveSection("servicios")}
             />
@@ -502,7 +515,12 @@ export default function PrivateAreaPage() {
           )}
 
           {activeSection === "solicitudes" && (
-            <RequestsPanel confirmation={confirmation} requests={requests} />
+            <RequestsPanel
+              confirmation={confirmation}
+              requests={requests}
+              loading={requestsLoading}
+              showParticipant={Boolean(profile && profile.participanteIds.length > 1)}
+            />
           )}
 
           {activeSection === "ayuda" && <HelpPanel />}
@@ -531,7 +549,11 @@ function HomePanel({
     <div className="grid gap-4 md:grid-cols-3">
       <InfoCard label="Actividades" value={loading ? "..." : String(actividadesCount)} text="Consulta talleres y eventos." />
       <InfoCard label="Servicios" value={loading ? "..." : String(serviciosCount)} text="Solicita apoyo especializado." />
-      <InfoCard label="Solicitudes" value={String(requestsCount)} text="Revisa lo enviado desde este navegador." />
+      <InfoCard
+        label="Solicitudes"
+        value={loading ? "..." : String(requestsCount)}
+        text="Revisa tus solicitudes registradas."
+      />
 
       <div className="rounded-3xl border border-[#d8d1c2] bg-[#fffdf7] p-6 shadow-sm md:col-span-3">
         <h3 className="text-xl font-bold">Que puedes hacer ahora</h3>
@@ -928,15 +950,19 @@ function InscriptionWizard({
 function RequestsPanel({
   confirmation,
   requests,
+  loading,
+  showParticipant,
 }: {
   confirmation: string;
-  requests: LocalRequest[];
+  requests: PrivateRequest[];
+  loading: boolean;
+  showParticipant: boolean;
 }) {
   return (
     <section className="rounded-3xl border border-[#d8d1c2] bg-[#fffdf7] p-6 shadow-sm">
       <h3 className="text-2xl font-bold">Mis solicitudes</h3>
       <p className="mt-2 leading-7 text-[#52615c]">
-        Aqui se muestran las solicitudes enviadas desde este navegador durante el uso del area privada.
+        Aqui se muestran las solicitudes registradas para este acceso privado.
       </p>
 
       {confirmation && (
@@ -945,26 +971,40 @@ function RequestsPanel({
         </p>
       )}
 
-      {requests.length === 0 ? (
+      {loading ? (
+        <p className="mt-5 rounded-2xl bg-[#f7f2e8] p-4">Cargando solicitudes...</p>
+      ) : requests.length === 0 ? (
         <p className="mt-5 rounded-2xl bg-[#f7f2e8] p-4">
           Todavia no hay solicitudes enviadas.
         </p>
       ) : (
         <div className="mt-5 space-y-3">
           {requests.map((request) => (
-            <article key={request.id} className="rounded-2xl border border-[#d8d1c2] bg-white p-4">
+            <article
+              key={`${request.kind}-${request.id}`}
+              className="rounded-2xl border border-[#d8d1c2] bg-white p-4"
+            >
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-[#23675b]">{request.id}</p>
+                  <p className="text-sm font-semibold text-[#23675b]">
+                    {request.kind === "actividad" ? "Actividad" : "Servicio"} #{request.itemId}
+                  </p>
                   <h4 className="font-bold">{request.title}</h4>
-                  <p className="text-sm text-[#52615c]">Enviada el {request.createdAt}</p>
+                  <p className="text-sm text-[#52615c]">
+                    Registrada el {formatRequestDate(request.createdAt)}
+                    {showParticipant ? ` · Participante #${request.participanteId}` : ""}
+                  </p>
                 </div>
-                <div className="rounded-2xl bg-[#edf7ef] px-4 py-2 text-sm font-bold text-[#244c35]">
-                  {request.status}
+                <div
+                  className={`rounded-2xl px-4 py-2 text-sm font-bold ${
+                    getRequestStatusClassName(request.state)
+                  }`}
+                >
+                  {getRequestStatusLabel(request.state)}
                 </div>
               </div>
               <p className="mt-3 text-sm text-[#52615c]">
-                {statusDescription[request.status]}
+                {getRequestStatusDescription(request.state)}
               </p>
             </article>
           ))}
@@ -972,6 +1012,46 @@ function RequestsPanel({
       )}
     </section>
   );
+}
+
+function getRequestStatusLabel(state?: string) {
+  if (!state) {
+    return "Pendiente";
+  }
+
+  return statusLabel[state as keyof typeof statusLabel] ?? state;
+}
+
+function getRequestStatusDescription(state?: string) {
+  if (!state) {
+    return "La asociacion revisara la solicitud.";
+  }
+
+  return (
+    statusDescription[state as keyof typeof statusDescription] ??
+    "La asociacion revisara la solicitud."
+  );
+}
+
+function getRequestStatusClassName(state?: string) {
+  if (!state) {
+    return "bg-[#fff5dd] text-[#785b12]";
+  }
+
+  return statusClassName[state as keyof typeof statusClassName] ?? "bg-[#f1eadc] text-[#3d4b47]";
+}
+
+function formatRequestDate(value?: string) {
+  if (!value) {
+    return "fecha no disponible";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleDateString("es-ES");
 }
 
 function HelpPanel() {

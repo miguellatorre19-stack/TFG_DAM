@@ -12,6 +12,7 @@ public interface InscripcionActividadRepository extends CrudRepository<Inscripci
     boolean existsByActividadIdAndParticipanteId(long actividadId, long participanteId);
     boolean existsByParticipanteId(long participanteId);
     List<InscripcionActividad> findByActividadId(long actividadId);
+    List<InscripcionActividad> findByParticipanteIdIn(List<Long> participanteIds);
     Optional<InscripcionActividad> findByIdAndActividadId(long id, long actividadId);
     void deleteByIdAndActividadId(long id, long actividadId);
     void deleteByParticipanteId(long participanteId);

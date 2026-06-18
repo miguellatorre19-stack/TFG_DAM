@@ -1,5 +1,6 @@
 import { apiFetch } from "./api";
 import type { LoginRequest, LoginResponse, MeResponse } from "@/types/auth";
+import type { PrivateRequest } from "@/types/privateRequest";
 
 export const PRIVATE_AREA_ROLES = ["SOCIO", "PARTICIPANTE"] as const;
 export const ADMIN_PANEL_ROLES = ["ADMIN", "ADMINISTRATIVA", "TRABAJADOR"] as const;
@@ -68,4 +69,8 @@ export function canAccessAdminPanel(
 
 export async function getMe(): Promise<MeResponse> {
   return apiFetch<MeResponse>("/me");
+}
+
+export async function getMyRequests(): Promise<PrivateRequest[]> {
+  return apiFetch<PrivateRequest[]>("/me/requests");
 }
