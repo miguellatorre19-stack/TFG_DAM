@@ -1,18 +1,56 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
-import { getUser } from "@/services/authService";
-import { getServicios } from "@/services/servicioService";
+import { canAccessAdminPanel, getUser } from "@/services/authService";
+import {
+  createServicio,
+  deleteServicio,
+  getServicios,
+  updateServicio,
+  type ServicioFormData,
+} from "@/services/servicioService";
 import type { Servicio } from "@/types/servicio";
+
+function createEmptyForm(): ServicioFormData {
+  return {
+    description: "",
+    periodicity: "",
+    requisites: "",
+    duration: 1,
+    capacity: 1,
+  };
+}
 
 export default function ServiciosPage() {
   const router = useRouter();
 
   const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [statusFilter, setStatusFilter] = useState<"active" | "archived">("active");
+  const [formData, setFormData] = useState<ServicioFormData>(() => createEmptyForm());
+  const [editingServicioId, setEditingServicioId] = useState<number | null>(null);
+
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  async function loadServicios(nextFilter: "active" | "archived" = statusFilter) {
+    setLoading(true);
+    setError("");
+
+    try {
+      const data = await getServicios(nextFilter === "archived");
+      setServicios(data);
+    } catch (error) {
+      console.error(error);
+      setError("No se han podido cargar los servicios.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     const user = getUser();
@@ -22,19 +60,107 @@ export default function ServiciosPage() {
       return;
     }
 
-    async function loadServicios() {
-      try {
-        const data = await getServicios();
-        setServicios(data);
-      } catch {
-        setError("No se han podido cargar los servicios.");
-      } finally {
-        setLoading(false);
-      }
+    if (!canAccessAdminPanel(user)) {
+      router.push("/area-privada");
+      return;
     }
 
-    loadServicios();
-  }, [router]);
+    const timeoutId = window.setTimeout(() => {
+      loadServicios();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [router, statusFilter]);
+
+  function handleInputChange(
+    field: keyof ServicioFormData,
+    value: string | number
+  ) {
+    setFormData((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function handleEdit(servicio: Servicio) {
+    setEditingServicioId(servicio.id);
+    setSuccessMessage("");
+    setError("");
+    setFormData({
+      description: servicio.description ?? "",
+      periodicity: servicio.periodicity ?? "",
+      requisites: servicio.requisites ?? "",
+      duration: servicio.duration ?? 1,
+      capacity: servicio.capacity ?? 1,
+    });
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleCancelEdit() {
+    setEditingServicioId(null);
+    setFormData(createEmptyForm());
+    setError("");
+    setSuccessMessage("");
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      if (editingServicioId) {
+        await updateServicio(editingServicioId, formData);
+        setSuccessMessage("Servicio actualizado correctamente.");
+      } else {
+        await createServicio(formData);
+        setSuccessMessage("Servicio creado correctamente.");
+      }
+
+      setFormData(createEmptyForm());
+      setEditingServicioId(null);
+      await loadServicios();
+    } catch (error) {
+      console.error(error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se ha podido guardar el servicio. Revisa los campos."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleArchive(servicio: Servicio) {
+    if (!window.confirm(`Se archivara el servicio ${servicio.description ?? servicio.id}.`)) {
+      return;
+    }
+
+    setDeletingId(servicio.id);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      await deleteServicio(servicio.id);
+      if (editingServicioId === servicio.id) {
+        handleCancelEdit();
+      }
+      setSuccessMessage("Servicio archivado correctamente.");
+      await loadServicios();
+    } catch (error) {
+      console.error(error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se ha podido archivar el servicio."
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-slate-100">
@@ -44,33 +170,174 @@ export default function ServiciosPage() {
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-slate-900">Servicios</h2>
           <p className="mt-2 text-slate-600">
-            Gestión de servicios especializados ofrecidos por trabajadores cualificados.
+            Gestion completa de servicios especializados ofrecidos por trabajadores cualificados.
           </p>
+          <div className="mt-4 flex items-center gap-3">
+            <label className="text-sm font-medium text-slate-700" htmlFor="servicios-status-filter">
+              Vista
+            </label>
+            <select
+              id="servicios-status-filter"
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as "active" | "archived")
+              }
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500"
+            >
+              <option value="active">Activos</option>
+              <option value="archived">Archivados</option>
+            </select>
+          </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl bg-white shadow">
+        <form
+          onSubmit={handleSubmit}
+          className="mb-8 rounded-2xl bg-white p-6 shadow"
+        >
+          <div className="mb-5">
+            <h3 className="text-lg font-semibold text-slate-900">
+              {editingServicioId ? "Editar servicio" : "Nuevo servicio"}
+            </h3>
+            <p className="mt-1 text-sm text-slate-600">
+              {editingServicioId
+                ? "Actualiza la configuracion del servicio."
+                : "Crea un nuevo servicio desde el panel de administracion."}
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block md:col-span-2">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Descripcion
+              </span>
+              <input
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.description}
+                onChange={(event) =>
+                  handleInputChange("description", event.target.value)
+                }
+                required
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Periodicidad
+              </span>
+              <input
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.periodicity}
+                onChange={(event) =>
+                  handleInputChange("periodicity", event.target.value)
+                }
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Requisitos
+              </span>
+              <input
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.requisites}
+                onChange={(event) =>
+                  handleInputChange("requisites", event.target.value)
+                }
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Duracion
+              </span>
+              <input
+                type="number"
+                min="0.5"
+                step="0.5"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.duration}
+                onChange={(event) =>
+                  handleInputChange("duration", Number(event.target.value))
+                }
+                required
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Capacidad
+              </span>
+              <input
+                type="number"
+                min="1"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.capacity}
+                onChange={(event) =>
+                  handleInputChange("capacity", Number(event.target.value))
+                }
+                required
+              />
+            </label>
+          </div>
+
+          {error && (
+            <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </p>
+          )}
+
+          {successMessage && (
+            <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              {successMessage}
+            </p>
+          )}
+
+          <div className="mt-6 flex gap-3">
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-300"
+            >
+              {saving
+                ? "Guardando..."
+                : editingServicioId
+                  ? "Guardar cambios"
+                  : "Crear servicio"}
+            </button>
+
+            {editingServicioId && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
+        </form>
+
+        <div className="overflow-x-auto rounded-2xl bg-white shadow">
           {loading && (
             <p className="p-6 text-sm text-slate-600">Cargando servicios...</p>
           )}
 
-          {error && <p className="p-6 text-sm text-red-700">{error}</p>}
-
           {!loading && !error && servicios.length === 0 && (
             <p className="p-6 text-sm text-slate-600">
-              No hay servicios registrados todavía.
+              No hay servicios registrados todavia.
             </p>
           )}
 
           {!loading && !error && servicios.length > 0 && (
-            <table className="w-full border-collapse text-left text-sm">
+            <table className="min-w-[850px] w-full border-collapse text-left text-sm">
               <thead className="bg-slate-50 text-slate-700">
                 <tr>
                   <th className="px-4 py-3 font-semibold">ID</th>
-                  <th className="px-4 py-3 font-semibold">Descripción</th>
-                  <th className="px-4 py-3 font-semibold">Tipo</th>
+                  <th className="px-4 py-3 font-semibold">Descripcion</th>
                   <th className="px-4 py-3 font-semibold">Periodicidad</th>
-                  <th className="px-4 py-3 font-semibold">Duración</th>
                   <th className="px-4 py-3 font-semibold">Capacidad</th>
+                  <th className="px-4 py-3 font-semibold">Estado</th>
+                  <th className="px-4 py-3 font-semibold">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -78,19 +345,37 @@ export default function ServiciosPage() {
                   <tr key={servicio.id}>
                     <td className="px-4 py-3 text-slate-600">{servicio.id}</td>
                     <td className="px-4 py-3 font-medium text-slate-900">
-                      {servicio.description ?? "Sin descripción"}
+                      {servicio.description ?? "Sin descripcion"}
                     </td>
                     <td className="px-4 py-3 text-slate-600">
-                      {servicio.typeService ?? "—"}
+                      {servicio.periodicity ?? "-"}
                     </td>
                     <td className="px-4 py-3 text-slate-600">
-                      {servicio.periodicity ?? "—"}
+                      {servicio.capacity ?? "-"}
                     </td>
                     <td className="px-4 py-3 text-slate-600">
-                      {servicio.duration ? `${servicio.duration} h` : "—"}
+                      {servicio.status ?? "ACTIVE"}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {servicio.capacity ?? "—"}
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(servicio)}
+                          className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          Editar
+                        </button>
+                        {servicio.status !== "ARCHIVED" && (
+                          <button
+                            type="button"
+                            onClick={() => handleArchive(servicio)}
+                            disabled={deletingId === servicio.id}
+                            className="rounded-lg border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {deletingId === servicio.id ? "Archivando..." : "Archivar"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

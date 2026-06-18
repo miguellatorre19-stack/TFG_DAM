@@ -31,4 +31,19 @@ public class TrabajadorDto {
     @NotBlank(message = "necesita una tipo de contrato")
     private String contractType;
     private long servicioId;
+    private long actividadId;
+
+    public TrabajadorDto(String dni, String name, String surname, String email, String phoneNumber,
+            LocalDate birthDate, LocalDate entryDate, String contractType, long servicioId) {
+        this.dni = dni;
+        this.name = name;
+        this.surname = surname;
+        this.email = email;
+        this.phoneNumber = phoneNumber;
+        this.birthDate = birthDate;
+        this.entryDate = entryDate;
+        this.contractType = contractType;
+        this.servicioId = servicioId;
+        this.actividadId = 0L;
+    }
 }

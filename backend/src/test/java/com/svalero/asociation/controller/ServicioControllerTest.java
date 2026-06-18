@@ -4,11 +4,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.svalero.asociation.dto.SolicitudServicioOutDto;
 import com.svalero.asociation.dto.ServicioDto;
 import com.svalero.asociation.dto.ServicioOutDto;
 import com.svalero.asociation.exception.ServicioNotFoundException;
 import static org.mockito.ArgumentMatchers.*;
 
+import com.svalero.asociation.service.SolicitudServicioService;
 import com.svalero.asociation.service.ServicioService;
 import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
@@ -41,6 +43,9 @@ class ServicioControllerTest {
 
     @MockitoBean
     public ServicioService servicioService;
+
+    @MockitoBean
+    public SolicitudServicioService solicitudServicioService;
 
     @Autowired
     private ObjectMapper objectMapper;

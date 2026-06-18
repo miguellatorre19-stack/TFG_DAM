@@ -1,664 +1,192 @@
-# \# TEA Gestión - Proyecto DAM
+# TEA Gestion - Proyecto DAM
 
-# 
+Aplicacion web de gestion interna y area privada para una asociacion TEA. El proyecto se trabaja como monorepo con backend Spring Boot, frontend Next.js y base de datos MariaDB en Docker.
 
-# Aplicación web de gestión interna para una asociación TEA, desarrollada como proyecto final del ciclo formativo de Grado Superior en Desarrollo de Aplicaciones Multiplataforma.
+## Convencion Unica De Arranque
 
-# 
+La configuracion queda simplificada a una sola forma oficial:
 
-# El proyecto está compuesto por:
+```txt
+Frontend local:        http://localhost:3000
+Backend local:         http://localhost:8080
+API base:              http://localhost:8080/api/v1
+Swagger:               http://localhost:8080/swagger-ui/index.html
+MariaDB desde el host: 127.0.0.1:3308
+MariaDB en Docker:     3306 dentro del contenedor
+```
 
-# 
+No se usan perfiles manuales de Spring para desarrollo local. No uses `dev`, `dev-local` ni `dev-docker`.
 
-# \* Backend REST con Spring Boot.
+## Estructura
 
-# \* Frontend con Next.js, React, TypeScript y Tailwind CSS.
+```txt
+TFG_DAM/
++-- backend/
++-- frontend/
++-- docs/
++-- scripts/
++-- docker-compose.yaml
++-- .env
++-- README.md
+```
 
-# \* Base de datos MariaDB.
+## Requisitos
 
-# \* Autenticación mediante JWT.
+- Java 21 o superior.
+- Maven o Maven Wrapper.
+- Node.js y npm.
+- Docker Desktop.
+- Git.
 
-# \* Control de acceso por roles.
+Nota: si `mvnw.cmd` falla con `"powershell" no se reconoce`, usa Maven instalado directamente.
 
-# \* Documentación de API mediante Swagger/OpenAPI.
+## Configuracion
 
-# \* Entorno de base de datos con Docker.
+Hay un unico `.env` en la raiz del proyecto:
 
-# 
+```env
+SERVER_PORT=8080
+FRONTEND_URL=http://localhost:3000
 
-# \## Estructura del proyecto
+DB_HOST=127.0.0.1
+DB_PORT=3308
+DB_NAME=association
+DB_USER=association_user
+DB_PASSWORD=association_password
+DB_ROOT_PASSWORD=root_password
 
-# 
+SEED_DATA_ENABLED=true
+JWT_SECRET=dev_secret_key_for_tfg_dam_project_2026_change_me_please
+JWT_EXPIRATION_MS=86400000
 
-# ```txt
+NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
+```
 
-# TFG\_DAM/
+La aplicacion tambien tiene valores por defecto equivalentes en `backend/src/main/resources/application.properties`, por lo que el backend local puede arrancar aunque no cargues el `.env` manualmente.
 
-# ├── backend/
+## Arranque Local
 
-# ├── frontend/
+Usa tres terminales.
 
-# ├── docker-compose.yaml
+### Terminal 1: Base De Datos
 
-# ├── .env.example
+Desde la raiz del proyecto:
 
-# └── README.md
+```powershell
+docker compose --env-file .env up -d db
+```
 
-# ```
+Comprueba que esta sana:
 
-# 
+```powershell
+docker compose --env-file .env ps
+```
 
-# \## Tecnologías principales
+Debe aparecer el contenedor:
 
-# 
+```txt
+association-db   healthy   0.0.0.0:3308->3306/tcp
+```
 
-# \### Backend
+Si queda un contenedor antiguo ocupando el puerto, paralo antes:
 
-# 
+```powershell
+docker rm -f association-dev-db
+```
 
-# \* Java
+### Terminal 2: Backend
 
-# \* Spring Boot
+Desde la raiz del proyecto:
 
-# \* Spring Security
+```powershell
+& "C:\maven\apache-maven-3.9.11\bin\mvn.cmd" -f backend\pom.xml spring-boot:run
+```
 
-# \* JWT
+Alternativa si `mvn` esta en PATH:
 
-# \* Spring Data JPA
+```powershell
+mvn -f backend\pom.xml spring-boot:run
+```
 
-# \* MariaDB
+Si venias de una configuracion antigua, limpia primero:
 
-# \* Swagger/OpenAPI
+```powershell
+& "C:\maven\apache-maven-3.9.11\bin\mvn.cmd" -f backend\pom.xml clean
+```
 
-# \* Maven
+### Terminal 3: Frontend
 
-# 
+Desde la raiz del proyecto:
 
-# \### Frontend
+```powershell
+cd frontend
+npm install
+npm run dev
+```
 
-# 
+## Usuario Demo
 
-# \* Next.js
+Si `SEED_DATA_ENABLED=true`, se crea un usuario administrador inicial:
 
-# \* React
+```txt
+Email: admin@teagestion.local
+Password: Admin1234
+Rol: ADMIN
+```
 
-# \* TypeScript
+## Funcionalidad Actual
 
-# \* Tailwind CSS
+- Backend REST con Spring Boot.
+- Frontend con Next.js, React y TypeScript.
+- Base de datos MariaDB mediante Docker Compose.
+- Autenticacion con JWT.
+- Control de acceso por roles.
+- CRUD backend de socios, participantes, actividades, servicios y trabajadores.
+- Creacion automatica de usuarios para socios, participantes y trabajadores.
+- Area privada para socios/participantes.
+- Consulta e inscripcion a actividades y servicios.
+- Endpoint `GET /api/v1/me` para resolver el perfil autenticado.
+- Swagger/OpenAPI para documentar la API.
 
-# \* ESLint
+## Tests
 
-# 
+Backend:
 
-# \### Infraestructura
+```powershell
+& "C:\maven\apache-maven-3.9.11\bin\mvn.cmd" -f backend\pom.xml test
+```
 
-# 
+Frontend:
 
-# \* Docker
+```powershell
+cd frontend
+npm run lint
+npm run build
+```
 
-# \* Docker Compose
+## Reglas Para Evitar Confusiones
 
-# \* GitHub
+No usar:
 
-# 
+```txt
+SPRING_PROFILES_ACTIVE
+DEV_DB_HOST
+DEV_DB_PORT
+DEV_DB_NAME
+DEV_DB_USER
+DEV_DB_PASSWORD
+application-dev.properties
+docker-compose-dev.yaml
+docker-compose-prod.yaml
+backend/.env
+```
 
-# \## Requisitos previos
+Usar solo:
 
-# 
+```txt
+.env
+docker-compose.yaml
+backend/src/main/resources/application.properties
+```
 
-# Para ejecutar el proyecto en local es necesario tener instalado:
-
-# 
-
-# \* Java 21 o superior
-
-# \* Maven Wrapper incluido en el proyecto
-
-# \* Node.js
-
-# \* npm
-
-# \* Docker Desktop
-
-# \* Git
-
-# 
-
-# \## Configuración
-
-# 
-
-# El proyecto incluye un archivo de ejemplo para variables de entorno:
-
-# 
-
-# ```txt
-
-# .env.example
-
-# ```
-
-# 
-
-# Para el entorno local de desarrollo se puede usar directamente este archivo con Docker Compose.
-
-# 
-
-# El frontend utiliza el archivo:
-
-# 
-
-# ```txt
-
-# frontend/.env.local
-
-# ```
-
-# 
-
-# con la siguiente variable:
-
-# 
-
-# ```env
-
-# NEXT\_PUBLIC\_API\_URL=http://localhost:8080/api/v1
-
-# ```
-
-# 
-
-# También se incluye un archivo de ejemplo:
-
-# 
-
-# ```txt
-
-# frontend/.env.local.example
-
-# ```
-
-# 
-
-# \## Arranque de la base de datos
-
-# 
-
-# Desde la raíz del proyecto:
-
-# 
-
-# ```bash
-
-# docker compose --env-file .env.example up -d db
-
-# ```
-
-# 
-
-# Comprobar que MariaDB está funcionando:
-
-# 
-
-# ```bash
-
-# docker ps
-
-# ```
-
-# 
-
-# Debe aparecer un contenedor de MariaDB en estado `healthy` y con el puerto `3306` publicado.
-
-# 
-
-# \## Arranque del backend
-
-# 
-
-# Desde la carpeta `backend`:
-
-# 
-
-# ```bash
-
-# cd backend
-
-# ./mvnw spring-boot:run
-
-# ```
-
-# 
-
-# El backend queda disponible en:
-
-# 
-
-# ```txt
-
-# http://localhost:8080
-
-# ```
-
-# 
-
-# La documentación Swagger/OpenAPI se puede consultar en:
-
-# 
-
-# ```txt
-
-# http://localhost:8080/swagger-ui/index.html
-
-# ```
-
-# 
-
-# \## Arranque del frontend
-
-# 
-
-# Desde la carpeta `frontend`:
-
-# 
-
-# ```bash
-
-# cd frontend
-
-# npm install
-
-# npm run dev
-
-# ```
-
-# 
-
-# El frontend queda disponible en:
-
-# 
-
-# ```txt
-
-# http://localhost:3000
-
-# ```
-
-# 
-
-# \## Usuario de prueba
-
-# 
-
-# El entorno de desarrollo crea un usuario administrador inicial:
-
-# 
-
-# ```txt
-
-# Email: admin@teagestion.local
-
-# Contraseña: Admin1234
-
-# Rol: ADMIN
-
-# ```
-
-# 
-
-# \## Funcionalidades implementadas
-
-# 
-
-# \* Login con JWT.
-
-# \* Dashboard de administración.
-
-# \* Menú de navegación principal.
-
-# \* Listado de socios.
-
-# \* CRUD de socios.
-
-# \* Listado de participantes.
-
-# \* Listado de actividades.
-
-# \* Listado de servicios.
-
-# \* Listado de trabajadores.
-
-# \* Datos demo en entorno de desarrollo.
-
-# \* API documentada con Swagger.
-
-# \* Seguridad por roles.
-
-# 
-
-# \## Roles previstos
-
-# 
-
-# La aplicación contempla distintos perfiles de usuario:
-
-# 
-
-# \* ADMIN
-
-# \* ADMINISTRATIVA
-
-# \* TRABAJADOR
-
-# \* VOLUNTARIO
-
-# \* SOCIO
-
-# 
-
-# Los permisos se gestionan desde la configuración de Spring Security mediante JWT y control de acceso por rutas.
-
-# 
-
-# \## Endpoints principales
-
-# 
-
-# Algunos endpoints principales del backend son:
-
-# 
-
-# ```txt
-
-# POST /api/v1/auth/login
-
-# GET  /api/v1/socios
-
-# POST /api/v1/socios
-
-# PUT  /api/v1/socios/{id}
-
-# DELETE /api/v1/socios/{id}
-
-# 
-
-# GET /api/v1/participantes
-
-# GET /api/v1/actividades
-
-# GET /api/v1/servicios
-
-# GET /api/v1/trabajadores
-
-# ```
-
-# 
-
-# \## Comprobaciones del backend
-
-# 
-
-# Desde la carpeta `backend`:
-
-# 
-
-# ```bash
-
-# cd backend
-
-# ./mvnw clean test
-
-# ```
-
-# 
-
-# Resultado esperado:
-
-# 
-
-# ```txt
-
-# BUILD SUCCESS
-
-# ```
-
-# 
-
-# \## Comprobaciones del frontend
-
-# 
-
-# Desde la carpeta `frontend`:
-
-# 
-
-# ```bash
-
-# cd frontend
-
-# npm run lint
-
-# npm run build
-
-# ```
-
-# 
-
-# Resultado esperado:
-
-# 
-
-# ```txt
-
-# Compiled successfully
-
-# ```
-
-# 
-
-# \## Flujo recomendado de ejecución local
-
-# 
-
-# Abrir tres terminales.
-
-# 
-
-# \### Terminal 1: base de datos
-
-# 
-
-# ```bash
-
-# cd /h/TFG\_DAM/repo/TFG\_DAM
-
-# docker compose --env-file .env.example up -d db
-
-# ```
-
-# 
-
-# \### Terminal 2: backend
-
-# 
-
-# ```bash
-
-# cd /h/TFG\_DAM/repo/TFG\_DAM/backend
-
-# ./mvnw spring-boot:run
-
-# ```
-
-# 
-
-# \### Terminal 3: frontend
-
-# 
-
-# ```bash
-
-# cd /h/TFG\_DAM/repo/TFG\_DAM/frontend
-
-# npm run dev
-
-# ```
-
-# 
-
-# Después acceder a:
-
-# 
-
-# ```txt
-
-# http://localhost:3000
-
-# ```
-
-# 
-
-# \## Datos demo
-
-# 
-
-# En perfil `dev`, la aplicación carga datos iniciales para facilitar la demostración funcional:
-
-# 
-
-# \* Socios
-
-# \* Participantes
-
-# \* Actividades
-
-# \* Servicios
-
-# \* Trabajadores
-
-# \* Usuario administrador inicial
-
-# 
-
-# Estos datos se cargan únicamente si no existen registros previos, para evitar duplicados en cada arranque.
-
-# 
-
-# \## Entrega
-
-# 
-
-# Para la entrega del proyecto no deben incluirse carpetas generadas ni dependencias instaladas.
-
-# 
-
-# No incluir:
-
-# 
-
-# ```txt
-
-# node\_modules/
-
-# .next/
-
-# target/
-
-# build/
-
-# dist/
-
-# .env
-
-# .env.local
-
-# backups de WordPress
-
-# volcados .sql
-
-# archivos comprimidos innecesarios
-
-# ```
-
-# 
-
-# Sí incluir:
-
-# 
-
-# ```txt
-
-# backend/
-
-# frontend/
-
-# docker-compose.yaml
-
-# .env.example
-
-# README.md
-
-# colecciones Postman si forman parte de la documentación
-
-# documentación técnica del proyecto
-
-# ```
-
-# 
-
-# \## Estado actual del proyecto
-
-# 
-
-# El proyecto dispone de una base funcional completa:
-
-# 
-
-# \* Backend Spring Boot operativo.
-
-# \* Base de datos MariaDB en Docker.
-
-# \* Autenticación JWT funcionando.
-
-# \* Swagger disponible.
-
-# \* Frontend Next.js conectado al backend.
-
-# \* Dashboard de administración.
-
-# \* CRUD funcional de socios.
-
-# \* Listados principales cargando desde la API.
-
-# \* Datos demo para presentación.
-
-# 
-
-# \## Líneas futuras
-
-# 
-
-# Algunas mejoras previstas son:
-
-# 
-
-# \* CRUD completo de actividades.
-
-# \* CRUD completo de servicios.
-
-# \* Gestión avanzada de participantes.
-
-# \* Gestión de usuarios y roles desde el frontend.
-
-# \* Inscripción de socios o participantes en actividades.
-
-# \* Asignación de servicios por trabajadores cualificados.
-
-# \* Integración final con la web WordPress mediante subdominio o ruta `/intranet`.
-
-# \* Mejora de accesibilidad y experiencia de usuario.
-
-# \* Preparación de despliegue completo en servidor.
-
-
-
+Si aparece un error JDBC apuntando a `localhost:3306`, casi seguro queda una variable o archivo antiguo. Limpia `target` con Maven y comprueba que no exista `SPRING_PROFILES_ACTIVE` en la terminal.

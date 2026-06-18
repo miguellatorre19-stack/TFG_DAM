@@ -1,18 +1,81 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
-import { getUser } from "@/services/authService";
-import { getParticipantes } from "@/services/participanteService";
+import BajaDialog from "@/components/BajaDialog";
+import CredentialsNotice from "@/components/CredentialsNotice";
+import { canAccessAdminPanel, getUser } from "@/services/authService";
+import {
+  createParticipante,
+  darDeBajaParticipante,
+  getParticipantes,
+  regenerateParticipanteAccessCode,
+  reactivarParticipante,
+  updateParticipante,
+  type ParticipanteFormData,
+} from "@/services/participanteService";
+import { getSocios } from "@/services/socioService";
+import type { IssuedAccessCredentials } from "@/types/access";
 import type { Participante } from "@/types/participante";
+import type { Socio } from "@/types/socio";
+
+function createEmptyForm(): ParticipanteFormData {
+  return {
+    dni: "",
+    name: "",
+    surname: "",
+    email: "",
+    phoneNumber: "",
+    birthDate: "",
+    needs: "",
+    typeRel: "",
+    socioID: 0,
+  };
+}
 
 export default function ParticipantesPage() {
   const router = useRouter();
 
   const [participantes, setParticipantes] = useState<Participante[]>([]);
+  const [socios, setSocios] = useState<Socio[]>([]);
+  const [statusFilter, setStatusFilter] = useState<"active" | "inactive">("active");
+  const [formData, setFormData] = useState<ParticipanteFormData>(() =>
+    createEmptyForm()
+  );
+  const [editingParticipanteId, setEditingParticipanteId] = useState<number | null>(null);
+
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [reactivatingId, setReactivatingId] = useState<number | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [issuedCredentials, setIssuedCredentials] =
+    useState<IssuedAccessCredentials | null>(null);
+  const [bajaTarget, setBajaTarget] = useState<Participante | null>(null);
+  const [bajaReason, setBajaReason] = useState("");
+  const [bajaError, setBajaError] = useState("");
+
+  async function loadData(nextFilter: "active" | "inactive" = statusFilter) {
+    setLoading(true);
+    setError("");
+
+    try {
+      const [participantesData, sociosData] = await Promise.all([
+        getParticipantes(nextFilter === "active"),
+        getSocios(true),
+      ]);
+      setParticipantes(participantesData);
+      setSocios(sociosData);
+    } catch (error) {
+      console.error(error);
+      setError("No se han podido cargar los participantes.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     const user = getUser();
@@ -22,19 +85,202 @@ export default function ParticipantesPage() {
       return;
     }
 
-    async function loadParticipantes() {
-      try {
-        const data = await getParticipantes();
-        setParticipantes(data);
-      } catch {
-        setError("No se han podido cargar los participantes.");
-      } finally {
-        setLoading(false);
-      }
+    if (!canAccessAdminPanel(user)) {
+      router.push("/area-privada");
+      return;
     }
 
-    loadParticipantes();
-  }, [router]);
+    const timeoutId = window.setTimeout(() => {
+      loadData();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [router, statusFilter]);
+
+  function handleInputChange(
+    field: keyof ParticipanteFormData,
+    value: string | number
+  ) {
+    setFormData((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function handleEdit(participante: Participante) {
+    setEditingParticipanteId(participante.id);
+    setSuccessMessage("");
+    setError("");
+    setIssuedCredentials(null);
+    setFormData({
+      dni: participante.dni ?? "",
+      name: participante.name ?? "",
+      surname: participante.surname ?? "",
+      email: participante.email ?? "",
+      phoneNumber: participante.phoneNumber ?? "",
+      birthDate: participante.birthDate ?? "",
+      needs: participante.needs ?? "",
+      typeRel: participante.typeRel ?? "",
+      socioID: participante.socioID ?? 0,
+    });
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleCancelEdit() {
+    setEditingParticipanteId(null);
+    setFormData(createEmptyForm());
+    setError("");
+    setSuccessMessage("");
+    setIssuedCredentials(null);
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!formData.socioID) {
+      setError("Debes seleccionar un socio para vincular el participante.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setSuccessMessage("");
+    setIssuedCredentials(null);
+
+    try {
+      if (editingParticipanteId) {
+        await updateParticipante(editingParticipanteId, formData);
+        setSuccessMessage("Participante actualizado correctamente.");
+      } else {
+        const createdParticipante = await createParticipante(formData.socioID, formData);
+        setIssuedCredentials(createdParticipante);
+        setSuccessMessage("Participante creado correctamente.");
+      }
+
+      setFormData(createEmptyForm());
+      setEditingParticipanteId(null);
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se ha podido guardar el participante. Revisa los campos."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleRegenerateAccessCode(participante: Participante) {
+    if (
+      !window.confirm(
+        "Se generara un nuevo codigo de acceso para este participante. El anterior dejara de ser valido."
+      )
+    ) {
+      return;
+    }
+
+    setRegeneratingId(participante.id);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      const credentials = await regenerateParticipanteAccessCode(participante.id);
+      setIssuedCredentials(credentials);
+      setSuccessMessage("Codigo de acceso regenerado correctamente.");
+    } catch (error) {
+      console.error(error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se ha podido regenerar el codigo de acceso."
+      );
+    } finally {
+      setRegeneratingId(null);
+    }
+  }
+
+  async function handleDelete(participante: Participante) {
+    setBajaTarget(participante);
+    setBajaReason("");
+    setBajaError("");
+    setError("");
+    setSuccessMessage("");
+    setIssuedCredentials(null);
+  }
+
+  function closeBajaDialog() {
+    setBajaTarget(null);
+    setBajaReason("");
+    setBajaError("");
+  }
+
+  async function confirmBajaParticipante() {
+    if (!bajaTarget) {
+      return;
+    }
+
+    const trimmedReason = bajaReason.trim();
+
+    if (!trimmedReason) {
+      setBajaError("Debes indicar el motivo de la baja.");
+      return;
+    }
+
+    setDeletingId(bajaTarget.id);
+    setError("");
+    setBajaError("");
+    setSuccessMessage("");
+    setIssuedCredentials(null);
+
+    try {
+      await darDeBajaParticipante(bajaTarget.id, { reason: trimmedReason });
+      if (editingParticipanteId === bajaTarget.id) {
+        handleCancelEdit();
+      }
+      setSuccessMessage("Participante dado de baja correctamente.");
+      closeBajaDialog();
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se ha podido dar de baja al participante.";
+      setError(message);
+      setBajaError(message);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function handleReactivate(participante: Participante) {
+    if (!window.confirm(`Se reactivara al participante ${participante.name ?? participante.id}.`)) {
+      return;
+    }
+
+    setReactivatingId(participante.id);
+    setError("");
+    setSuccessMessage("");
+    setIssuedCredentials(null);
+
+    try {
+      await reactivarParticipante(participante.id);
+      setSuccessMessage("Participante reactivado correctamente.");
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se ha podido reactivar al participante."
+      );
+    } finally {
+      setReactivatingId(null);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-slate-100">
@@ -44,20 +290,233 @@ export default function ParticipantesPage() {
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-slate-900">Participantes</h2>
           <p className="mt-2 text-slate-600">
-            Gestión de personas participantes vinculadas a socios, actividades o servicios.
+            Alta, edicion y baja de participantes vinculados a socios, junto con sus credenciales.
           </p>
+          <div className="mt-4 flex items-center gap-3">
+            <label className="text-sm font-medium text-slate-700" htmlFor="participantes-status-filter">
+              Vista
+            </label>
+            <select
+              id="participantes-status-filter"
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as "active" | "inactive")
+              }
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500"
+            >
+              <option value="active">Activos</option>
+              <option value="inactive">Inactivos</option>
+            </select>
+          </div>
         </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="mb-8 rounded-2xl bg-white p-6 shadow"
+        >
+          <div className="mb-5">
+            <h3 className="text-lg font-semibold text-slate-900">
+              {editingParticipanteId ? "Editar participante" : "Nuevo participante"}
+            </h3>
+            <p className="mt-1 text-sm text-slate-600">
+              {editingParticipanteId
+                ? "Actualiza sus datos personales y la vinculacion con el socio tutor."
+                : "Cada alta genera un usuario con email y codigo inicial."}
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Socio tutor
+              </span>
+              <select
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.socioID}
+                onChange={(event) =>
+                  handleInputChange("socioID", Number(event.target.value))
+                }
+                required
+              >
+                <option value={0}>Selecciona un socio</option>
+                {socios.map((socio) => (
+                  <option key={socio.id} value={socio.id}>
+                    {`${socio.name ?? ""} ${socio.surname ?? ""}`.trim() ||
+                      `Socio ${socio.id}`}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Relacion
+              </span>
+              <input
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.typeRel}
+                onChange={(event) =>
+                  handleInputChange("typeRel", event.target.value)
+                }
+                placeholder="Hijo, tutelado, familiar..."
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Nombre
+              </span>
+              <input
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.name}
+                onChange={(event) =>
+                  handleInputChange("name", event.target.value)
+                }
+                required
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Apellidos
+              </span>
+              <input
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.surname}
+                onChange={(event) =>
+                  handleInputChange("surname", event.target.value)
+                }
+                required
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Email
+              </span>
+              <input
+                type="email"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.email}
+                onChange={(event) =>
+                  handleInputChange("email", event.target.value)
+                }
+                required
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Telefono
+              </span>
+              <input
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.phoneNumber}
+                onChange={(event) =>
+                  handleInputChange("phoneNumber", event.target.value)
+                }
+                placeholder="600-123-456"
+                pattern="\d{3}-\d{3}-\d{3}"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                DNI
+              </span>
+              <input
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 uppercase text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.dni}
+                onChange={(event) =>
+                  handleInputChange("dni", event.target.value.toUpperCase())
+                }
+                placeholder="12345678A"
+                pattern="\d{8}[A-Z]"
+                required
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Fecha de nacimiento
+              </span>
+              <input
+                type="date"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.birthDate}
+                onChange={(event) =>
+                  handleInputChange("birthDate", event.target.value)
+                }
+              />
+            </label>
+
+            <label className="block md:col-span-2">
+              <span className="mb-1 block text-sm font-medium text-slate-700">
+                Necesidades
+              </span>
+              <textarea
+                className="min-h-28 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-indigo-500"
+                value={formData.needs}
+                onChange={(event) =>
+                  handleInputChange("needs", event.target.value)
+                }
+              />
+            </label>
+          </div>
+
+          {error && (
+            <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </p>
+          )}
+
+          {successMessage && (
+            <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              {successMessage}
+            </p>
+          )}
+
+          {issuedCredentials && (
+            <CredentialsNotice
+              credentials={issuedCredentials}
+              entityLabel="participante"
+              onDismiss={() => setIssuedCredentials(null)}
+            />
+          )}
+
+          <div className="mt-6 flex gap-3">
+            <button
+              type="submit"
+              disabled={saving || socios.length === 0}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-300"
+            >
+              {saving
+                ? "Guardando..."
+                : editingParticipanteId
+                  ? "Guardar cambios"
+                  : "Crear participante"}
+            </button>
+
+            {editingParticipanteId && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
+        </form>
 
         <div className="overflow-hidden rounded-2xl bg-white shadow">
           {loading && (
             <p className="p-6 text-sm text-slate-600">Cargando participantes...</p>
           )}
 
-          {error && <p className="p-6 text-sm text-red-700">{error}</p>}
-
           {!loading && !error && participantes.length === 0 && (
             <p className="p-6 text-sm text-slate-600">
-              No hay participantes registrados todavía.
+              No hay participantes registrados todavia.
             </p>
           )}
 
@@ -65,30 +524,95 @@ export default function ParticipantesPage() {
             <table className="w-full border-collapse text-left text-sm">
               <thead className="bg-slate-50 text-slate-700">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">ID</th>
-                  <th className="px-4 py-3 font-semibold">Nombre</th>
-                  <th className="px-4 py-3 font-semibold">Email</th>
-                  <th className="px-4 py-3 font-semibold">Teléfono</th>
-                  <th className="px-4 py-3 font-semibold">Relación</th>
+                  <th className="px-4 py-3 font-semibold">Participante</th>
+                  <th className="px-4 py-3 font-semibold">Vinculacion</th>
+                  <th className="px-4 py-3 font-semibold">Estado</th>
+                  <th className="px-4 py-3 font-semibold">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {participantes.map((participante) => (
                   <tr key={participante.id}>
-                    <td className="px-4 py-3 text-slate-600">{participante.id}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      {[participante.name, participante.surname]
-                        .filter(Boolean)
-                        .join(" ") || "Sin nombre"}
+                    <td className="px-4 py-4 align-top">
+                      <div className="space-y-1">
+                        <p className="font-medium text-slate-900">
+                          {[participante.name, participante.surname]
+                            .filter(Boolean)
+                            .join(" ") || "Sin nombre"}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          ID {participante.id} · {participante.dni ?? "Sin DNI"}
+                        </p>
+                        <p className="text-sm text-slate-600">
+                          {participante.email ?? "-"}
+                        </p>
+                        <p className="text-sm text-slate-600">
+                          {participante.phoneNumber ?? "-"}
+                        </p>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {participante.email ?? "—"}
+                    <td className="px-4 py-4 align-top text-sm text-slate-600">
+                      <p>{participante.socioID ? `Socio ${participante.socioID}` : "-"}</p>
+                      <p className="mt-1">{participante.typeRel ?? "Sin relacion"}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Nacimiento: {participante.birthDate ?? "-"}
+                      </p>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {participante.phoneNumber ?? "—"}
+                    <td className="px-4 py-4 align-top">
+                      <div className="space-y-2 text-sm text-slate-600">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                            participante.active === false
+                              ? "bg-slate-200 text-slate-700"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
+                          {participante.active === false ? "Inactivo" : "Activo"}
+                        </span>
+                        <p>Baja: {participante.outDate ?? "-"}</p>
+                        <p>Motivo: {participante.reason ?? "-"}</p>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {participante.typeRel ?? "—"}
+                    <td className="px-4 py-4 align-top">
+                      <div className="flex min-w-48 flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(participante)}
+                          className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRegenerateAccessCode(participante)}
+                          disabled={regeneratingId === participante.id}
+                          className="rounded-lg border border-amber-300 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {regeneratingId === participante.id
+                            ? "Regenerando..."
+                            : "Regenerar acceso"}
+                        </button>
+                        {participante.active !== false && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(participante)}
+                            disabled={deletingId === participante.id}
+                            className="rounded-lg border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {deletingId === participante.id ? "Dando de baja..." : "Dar de baja"}
+                          </button>
+                        )}
+                        {participante.active === false && (
+                          <button
+                            type="button"
+                            onClick={() => handleReactivate(participante)}
+                            disabled={reactivatingId === participante.id}
+                            className="rounded-lg border border-emerald-300 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {reactivatingId === participante.id ? "Reactivando..." : "Reactivar"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -97,6 +621,18 @@ export default function ParticipantesPage() {
           )}
         </div>
       </section>
+
+      <BajaDialog
+        open={bajaTarget !== null}
+        title="Registrar baja de participante"
+        description="La baja deja inactivo al participante y desactiva su acceso. El motivo quedara registrado."
+        reason={bajaReason}
+        error={bajaError}
+        busy={deletingId !== null}
+        onReasonChange={setBajaReason}
+        onClose={closeBajaDialog}
+        onConfirm={confirmBajaParticipante}
+      />
     </main>
   );
 }

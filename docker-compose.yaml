@@ -1,0 +1,24 @@
+services:
+  db:
+    image: mariadb:11.8
+    container_name: association-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-association}
+      MARIADB_USER: ${DB_USER:-association_user}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-association_password}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
+      MARIADB_ROOT_HOST: "%"
+    ports:
+      - "${DB_PORT:-3308}:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -p$${MARIADB_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    volumes:
+      - association-db-data:/var/lib/mysql
+
+volumes:
+  association-db-data:

@@ -1,7 +1,14 @@
 package com.svalero.asociation.service;
 
+import com.svalero.asociation.dto.AccessCredentialsDto;
+import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.BajaRequestDto;
+import com.svalero.asociation.dto.SocioAccessResponseDto;
 import com.svalero.asociation.dto.SocioDto;
+import com.svalero.asociation.exception.BusinessRuleException;
+import com.svalero.asociation.model.Participante;
 import com.svalero.asociation.model.Socio;
+import com.svalero.asociation.model.Usuario;
 import com.svalero.asociation.repository.SocioRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static java.lang.Character.getType;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.Mockito.*;
 
@@ -33,6 +39,9 @@ public class SocioServiceTest {
 
     @Mock
     private ModelMapper mapper;
+
+    @Mock
+    private AccessUserService accessUserService;
 
     @Test
     public void testFindAll() {
@@ -160,6 +169,37 @@ public class SocioServiceTest {
     }
 
     @Test
+    public void testAddWithAccessCreatesSocioUser() {
+        Socio mockNewSocio = new Socio(3,"99932405D","Oscar", "Lanuza", "oscar@email.com", "C Subida 128", "991-003-323","Monoparental",true, LocalDate.now().plusDays(1), null, new ArrayList<>());
+        SocioDto socioDto = new SocioDto(3L,"99932405D","Oscar", "Lanuza", "oscar@email.com", "991-003-323", true,"Monoparental" ,LocalDate.now().plusDays(1), null);
+        Usuario usuario = Usuario.builder()
+                .id(10L)
+                .name("Oscar Lanuza")
+                .email("oscar@email.com")
+                .password("encoded-password")
+                .active(true)
+                .build();
+
+        when(socioRepository.existsBydni(mockNewSocio.getDni())).thenReturn(false);
+        when(accessUserService.createAccessUser("Oscar Lanuza", "oscar@email.com", "SOCIO"))
+                .thenReturn(new AccessCredentialsDto(usuario, "ABCDE-23456"));
+        when(socioRepository.save(any(Socio.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(mapper.map(any(Socio.class), eq(SocioDto.class))).thenReturn(socioDto);
+
+        SocioAccessResponseDto response = socioService.addWithAccess(mockNewSocio);
+
+        assertEquals(3L, response.getSocio().getId());
+        assertEquals(10L, response.getUsuarioId());
+        assertEquals("oscar@email.com", response.getEmail());
+        assertEquals("ABCDE-23456", response.getInitialPassword());
+        assertNotNull(mockNewSocio.getUsuario());
+        assertEquals("encoded-password", mockNewSocio.getUsuario().getPassword());
+
+        verify(accessUserService, times(1)).createAccessUser("Oscar Lanuza", "oscar@email.com", "SOCIO");
+        verify(socioRepository, times(1)).save(mockNewSocio);
+    }
+
+    @Test
     public void testModify() {
 
         Socio mockSocio = new Socio(3,"77732405D","Eduardo", "Lanuza", "email@email.com", "C Subida 128", "991-003-323","Monoparental",false, LocalDate.now().plusDays(1), null, new ArrayList<>());
@@ -175,14 +215,121 @@ public class SocioServiceTest {
     }
 
     @Test
-    public void testDelete(){
-        Socio mockSocio = new Socio(3,"99932405D","Oscar", "Lanuza", "email@email.com", "C Subida 128", "991-003-323","Monoparental",false, LocalDate.now().plusDays(1), null, new ArrayList<>());
+    public void testRegenerateAccessCodeExistingUser() {
+        Socio socio = new Socio(3,"99932405D","Oscar", "Lanuza", "oscar@email.com", "C Subida 128", "991-003-323","Monoparental",true, LocalDate.now().plusDays(1), null, new ArrayList<>());
+        Usuario usuario = Usuario.builder()
+                .id(10L)
+                .name("Oscar Lanuza")
+                .email("oscar@email.com")
+                .password("encoded-password")
+                .active(true)
+                .build();
+        socio.setUsuario(usuario);
+
+        when(socioRepository.findById(3L)).thenReturn(Optional.of(socio));
+        when(accessUserService.regenerateAccessCode(usuario))
+                .thenReturn(new AccessCredentialsDto(usuario, "ZXCVB-12345"));
+
+        AccessCodeResponseDto response = socioService.regenerateAccessCode(3L);
+
+        assertEquals(10L, response.getUsuarioId());
+        assertEquals("oscar@email.com", response.getEmail());
+        assertEquals("ZXCVB-12345", response.getInitialPassword());
+        verify(accessUserService).regenerateAccessCode(usuario);
+        verify(accessUserService, never()).createAccessUser(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    public void testRegenerateAccessCodeCreatesUserWhenMissing() {
+        Socio socio = new Socio(3,"99932405D","Oscar", "Lanuza", "oscar@email.com", "C Subida 128", "991-003-323","Monoparental",true, LocalDate.now().plusDays(1), null, new ArrayList<>());
+        Usuario usuario = Usuario.builder()
+                .id(10L)
+                .name("Oscar Lanuza")
+                .email("oscar@email.com")
+                .password("encoded-password")
+                .active(true)
+                .build();
+
+        when(socioRepository.findById(3L)).thenReturn(Optional.of(socio));
+        when(accessUserService.createAccessUser("Oscar Lanuza", "oscar@email.com", "SOCIO"))
+                .thenReturn(new AccessCredentialsDto(usuario, "ABCDE-23456"));
+        when(socioRepository.save(any(Socio.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AccessCodeResponseDto response = socioService.regenerateAccessCode(3L);
+
+        assertEquals(10L, response.getUsuarioId());
+        assertEquals("ABCDE-23456", response.getInitialPassword());
+        assertNotNull(socio.getUsuario());
+        verify(accessUserService).createAccessUser("Oscar Lanuza", "oscar@email.com", "SOCIO");
+        verify(socioRepository).save(socio);
+    }
+
+    @Test
+    public void testDarDeBaja(){
+        Socio mockSocio = new Socio(3,"99932405D","Oscar", "Lanuza", "email@email.com", "C Subida 128", "991-003-323","Monoparental",true, LocalDate.now().minusDays(10), null, new ArrayList<>());
+        Usuario socioUsuario = Usuario.builder().id(10L).email("email@email.com").active(true).build();
+        Participante participante = new Participante();
+        participante.setId(7L);
+        participante.setActive(true);
+        participante.setReason(null);
+        Usuario participanteUsuario = Usuario.builder().id(11L).email("participante@email.com").active(true).build();
+        participante.setUsuario(participanteUsuario);
+        mockSocio.setUsuario(socioUsuario);
+        mockSocio.setParticipanteList(List.of(participante));
 
         when(socioRepository.findById(mockSocio.getId())).thenReturn(Optional.of(mockSocio));
+        when(socioRepository.save(mockSocio)).thenReturn(mockSocio);
 
-        socioService.delete(mockSocio.getId());
+        socioService.darDeBaja(mockSocio.getId(), new BajaRequestDto("Baja voluntaria", LocalDate.now().minusDays(2)));
 
-        verify(socioRepository, times(1)).delete(mockSocio);
+        assertFalse(mockSocio.getActive());
+        assertNotNull(mockSocio.getOutDate());
+        assertEquals(LocalDate.now().minusDays(2), mockSocio.getOutDate());
+        assertFalse(participante.getActive());
+        assertNotNull(participante.getOutDate());
+        assertEquals("Baja voluntaria", mockSocio.getReason());
+        assertEquals("Socio dado de baja: Baja voluntaria", participante.getReason());
+        verify(accessUserService).deactivateAccessUser(socioUsuario);
+        verify(accessUserService).deactivateAccessUser(participanteUsuario);
+        verify(socioRepository).save(mockSocio);
+        verify(socioRepository, never()).delete(any(Socio.class));
+    }
+
+    @Test
+    public void testDarDeBajaAlreadyInactiveThrowsBusinessRuleException() {
+        Socio socio = new Socio(3,"99932405D","Oscar", "Lanuza", "email@email.com", "C Subida 128", "991-003-323","Monoparental",false, LocalDate.now().minusDays(10), LocalDate.now().minusDays(1), new ArrayList<>());
+        when(socioRepository.findById(3L)).thenReturn(Optional.of(socio));
+
+        assertThrows(BusinessRuleException.class, () -> socioService.darDeBaja(3L, new BajaRequestDto("Baja voluntaria", LocalDate.now())));
+
+        verify(socioRepository, never()).save(any(Socio.class));
+    }
+
+    @Test
+    public void testReactivate() {
+        Socio socio = new Socio(3,"99932405D","Oscar", "Lanuza", "email@email.com", "C Subida 128", "991-003-323","Monoparental",false, LocalDate.now().minusDays(10), LocalDate.now().minusDays(1), new ArrayList<>());
+        socio.setReason("Baja voluntaria");
+        Usuario usuario = Usuario.builder().id(10L).email("email@email.com").active(false).build();
+        Participante participante = new Participante();
+        participante.setId(7L);
+        participante.setActive(false);
+        participante.setReason("Socio dado de baja");
+        participante.setOutDate(LocalDate.now().minusDays(1));
+        socio.setUsuario(usuario);
+        socio.setParticipanteList(List.of(participante));
+
+        when(socioRepository.findById(3L)).thenReturn(Optional.of(socio));
+        when(socioRepository.save(socio)).thenReturn(socio);
+
+        socioService.reactivar(3L);
+
+        assertTrue(socio.getActive());
+        assertNull(socio.getOutDate());
+        assertNull(socio.getReason());
+        assertFalse(participante.getActive());
+        assertNotNull(participante.getOutDate());
+        verify(accessUserService).reactivateAccessUser(usuario);
+        verify(socioRepository).save(socio);
     }
 
 }

@@ -1,7 +1,16 @@
 package com.svalero.asociation.service;
 
+import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.AccessCredentialsDto;
+import com.svalero.asociation.dto.BajaRequestDto;
+import com.svalero.asociation.dto.TrabajadorAccessResponseDto;
+import com.svalero.asociation.dto.TrabajadorDto;
+import com.svalero.asociation.dto.TrabajadorOutDto;
+import com.svalero.asociation.exception.BusinessRuleException;
+import com.svalero.asociation.model.Actividad;
 import com.svalero.asociation.model.Servicio;
 import com.svalero.asociation.model.Trabajador;
+import com.svalero.asociation.model.Usuario;
 import com.svalero.asociation.repository.TrabajadorRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +39,11 @@ public class TrabajadorServiceTest{
     private ModelMapper mapper;
     @Mock
     private ServicioService servicioService;
+    @Mock
+    private ActividadService actividadService;
+
+    @Mock
+    private AccessUserService accessUserService;
 
     @Test
     void findAll() {
@@ -127,6 +141,86 @@ public class TrabajadorServiceTest{
     }
 
     @Test
+    void testAddDtoWithAccess() {
+        TrabajadorDto trabajadorDto = new TrabajadorDto(
+                "77777777U",
+                "Hector",
+                "Aladia",
+                "email@email",
+                "888-566-323",
+                LocalDate.now().minusDays(2),
+                null,
+                "Tiempo Parcial",
+                1L
+        );
+        Servicio servicio = new Servicio(1, "trabajo social", "anual", "ninguno", 40f, 3, null, null);
+        Trabajador trabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now().minusDays(2), null, "Tiempo Parcial", null, null);
+        Usuario usuario = Usuario.builder()
+                .id(12L)
+                .name("Hector Aladia")
+                .email("email@email")
+                .password("encoded-password")
+                .active(true)
+                .build();
+
+        when(mapper.map(trabajadorDto, Trabajador.class)).thenReturn(trabajador);
+        when(trabajadorRepository.existsBydni("77777777U")).thenReturn(false);
+        when(servicioService.findById(1L)).thenReturn(servicio);
+        when(accessUserService.createAccessUser("Hector Aladia", "email@email", "TRABAJADOR"))
+                .thenReturn(new AccessCredentialsDto(usuario, "ABCDE-23456"));
+        when(trabajadorRepository.save(any(Trabajador.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TrabajadorAccessResponseDto response = trabajadorService.addDtoWithAccess(trabajadorDto, 1L);
+
+        assertEquals(12L, response.getUsuarioId());
+        assertEquals("ABCDE-23456", response.getInitialPassword());
+        assertEquals(1L, response.getTrabajador().getId());
+        verify(accessUserService).createAccessUser("Hector Aladia", "email@email", "TRABAJADOR");
+    }
+
+    @Test
+    void testAddDtoWithAccess_AssignsActividad() {
+        TrabajadorDto trabajadorDto = new TrabajadorDto(
+                "77777777U",
+                "Hector",
+                "Aladia",
+                "email@email",
+                "888-566-323",
+                LocalDate.now().minusDays(2),
+                null,
+                "Tiempo Parcial",
+                1L
+        );
+        trabajadorDto.setActividadId(7L);
+        Servicio servicio = new Servicio(1, "trabajo social", "anual", "ninguno", 40f, 3, null, null);
+        Actividad actividad = new Actividad();
+        actividad.setId(7L);
+        actividad.setDescription("Taller");
+        actividad.setStatus("ACTIVE");
+        Trabajador trabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now().minusDays(2), null, "Tiempo Parcial", null, null);
+        Usuario usuario = Usuario.builder()
+                .id(12L)
+                .name("Hector Aladia")
+                .email("email@email")
+                .password("encoded-password")
+                .active(true)
+                .build();
+
+        when(mapper.map(trabajadorDto, Trabajador.class)).thenReturn(trabajador);
+        when(trabajadorRepository.existsBydni("77777777U")).thenReturn(false);
+        when(servicioService.findById(1L)).thenReturn(servicio);
+        when(actividadService.findById(7L)).thenReturn(actividad);
+        when(accessUserService.createAccessUser("Hector Aladia", "email@email", "TRABAJADOR"))
+                .thenReturn(new AccessCredentialsDto(usuario, "ABCDE-23456"));
+        when(trabajadorRepository.save(any(Trabajador.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TrabajadorAccessResponseDto response = trabajadorService.addDtoWithAccess(trabajadorDto, 1L);
+
+        assertEquals(7L, response.getTrabajador().getActividadOutDto().getId());
+        verify(actividadService).findById(7L);
+    }
+
+    @Test
     void testModify() {
 
         Trabajador oldTrabajador =   new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now(), LocalDate.now(), "Tiempo Parcial", null, null);
@@ -185,14 +279,134 @@ public class TrabajadorServiceTest{
     }
 
     @Test
-    void testDelete() {
+    void testModify_AssignsActividad() {
+        Actividad oldActividad = new Actividad();
+        oldActividad.setId(1L);
+        oldActividad.setStatus("ACTIVE");
+        Actividad newActividad = new Actividad();
+        newActividad.setId(2L);
+        newActividad.setDescription("Taller");
+        newActividad.setStatus("ACTIVE");
+
+        Trabajador oldTrabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now().minusDays(1), LocalDate.now(), "Tiempo Parcial", oldActividad, null);
+        Trabajador wantedTrabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now().minusDays(1), LocalDate.now(), "Tiempo Parcial", new Actividad(), null);
+        wantedTrabajador.getActividad().setId(2L);
+
+        when(trabajadorRepository.findById(oldTrabajador.getId())).thenReturn(Optional.of(oldTrabajador));
+        when(actividadService.findById(2L)).thenReturn(newActividad);
+        when(trabajadorRepository.save(oldTrabajador)).thenReturn(oldTrabajador);
+
+        Trabajador result = trabajadorService.modify(oldTrabajador.getId(), wantedTrabajador);
+
+        assertNotNull(result.getActividad());
+        assertEquals(2L, result.getActividad().getId());
+        verify(actividadService).findById(2L);
+    }
+
+    @Test
+    void testFindDtoById_HidesArchivedActividad() {
+        Actividad actividad = new Actividad();
+        actividad.setId(5L);
+        actividad.setDescription("Archivada");
+        actividad.setStatus("ARCHIVED");
+        Trabajador trabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now(), LocalDate.now(), "Tiempo Parcial", actividad, null);
+
+        when(trabajadorRepository.findById(1L)).thenReturn(Optional.of(trabajador));
+
+        TrabajadorOutDto result = trabajadorService.findDtoById(1L);
+
+        assertNull(result.getActividadOutDto());
+    }
+
+    @Test
+    void testModifyDtoRejectsArchivedActividad() {
+        TrabajadorDto trabajadorDto = new TrabajadorDto(
+                "77777777U",
+                "Hector",
+                "Aladia",
+                "email@email",
+                "888-566-323",
+                LocalDate.now().minusDays(2),
+                LocalDate.now(),
+                "Tiempo Parcial",
+                1L
+        );
+        trabajadorDto.setActividadId(7L);
+        Trabajador trabajador = new Trabajador();
+        Actividad archivedActividad = new Actividad();
+        archivedActividad.setId(7L);
+        archivedActividad.setStatus("ARCHIVED");
+        Servicio servicio = new Servicio(1, "trabajo social", "anual", "ninguno", 40f, 3, null, null);
+
+        when(mapper.map(trabajadorDto, Trabajador.class)).thenReturn(trabajador);
+        when(servicioService.findById(1L)).thenReturn(servicio);
+        when(actividadService.findById(7L)).thenReturn(archivedActividad);
+
+        assertThrows(BusinessRuleException.class, () -> trabajadorService.modifyDto(1L, trabajadorDto));
+    }
+
+    @Test
+    void testRegenerateAccessCodeExistingUser() {
+        Trabajador trabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now(), LocalDate.now(), "Tiempo Parcial", null, null);
+        Usuario usuario = Usuario.builder()
+                .id(12L)
+                .name("Hector Aladia")
+                .email("email@email")
+                .password("encoded-password")
+                .active(true)
+                .build();
+        trabajador.setUsuario(usuario);
+
+        when(trabajadorRepository.findById(1L)).thenReturn(Optional.of(trabajador));
+        when(accessUserService.regenerateAccessCode(usuario))
+                .thenReturn(new AccessCredentialsDto(usuario, "ZXCVB-12345"));
+
+        AccessCodeResponseDto response = trabajadorService.regenerateAccessCode(1L);
+
+        assertEquals(12L, response.getUsuarioId());
+        assertEquals("ZXCVB-12345", response.getInitialPassword());
+        verify(accessUserService).regenerateAccessCode(usuario);
+    }
+
+    @Test
+    void testDarDeBaja() {
         Trabajador trabajador =   new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now(), LocalDate.now(), "Tiempo Parcial", null, null);
+        Usuario usuario = Usuario.builder().id(12L).email("email@email").active(true).build();
+        trabajador.setUsuario(usuario);
 
         when(trabajadorRepository.findById(trabajador.getId())).thenReturn(Optional.of(trabajador));
+        when(trabajadorRepository.save(trabajador)).thenReturn(trabajador);
 
-        trabajadorService.delete(trabajador.getId());
+        trabajadorService.darDeBaja(trabajador.getId(), new BajaRequestDto("Fin de relacion laboral", LocalDate.now().minusDays(3)));
 
-        verify(trabajadorRepository, times(1)).delete(trabajador);
+        assertFalse(trabajador.getActive());
+        assertNotNull(trabajador.getOutDate());
+        assertEquals(LocalDate.now().minusDays(3), trabajador.getOutDate());
+        assertEquals("Fin de relacion laboral", trabajador.getReason());
+        verify(trabajadorRepository, times(1)).save(trabajador);
+        verify(accessUserService).deactivateAccessUser(usuario);
+        verify(trabajadorRepository, never()).delete(trabajador);
+    }
+
+    @Test
+    void testReactivate() {
+        Trabajador trabajador = new Trabajador(1, "77777777U", "Hector", "Aladia", "email@email", "888-566-323", LocalDate.now(), LocalDate.now(), "Tiempo Parcial", null, null);
+        trabajador.setActive(false);
+        trabajador.setOutDate(LocalDate.now().minusDays(1));
+        trabajador.setReason("Baja voluntaria");
+        Usuario usuario = Usuario.builder().id(12L).email("email@email").active(false).build();
+        trabajador.setUsuario(usuario);
+
+        when(trabajadorRepository.findById(1L)).thenReturn(Optional.of(trabajador));
+        when(trabajadorRepository.save(trabajador)).thenReturn(trabajador);
+
+        trabajadorService.reactivar(1L);
+
+        assertTrue(trabajador.getActive());
+        assertNull(trabajador.getOutDate());
+        assertNull(trabajador.getReason());
+        verify(accessUserService).reactivateAccessUser(usuario);
+        verify(trabajadorRepository).save(trabajador);
     }
 
 }

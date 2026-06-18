@@ -2,10 +2,8 @@ package com.svalero.asociation.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.modelmapper.internal.bytebuddy.implementation.bind.annotation.Default;
 
 @Data
 @AllArgsConstructor

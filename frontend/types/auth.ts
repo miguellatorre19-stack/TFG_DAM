@@ -11,3 +11,15 @@ export interface LoginResponse {
   email: string;
   roles: string[];
 }
+
+export interface MeResponse {
+  userId: number;
+  name: string;
+  email: string;
+  roles: string[];
+  profileType: "SOCIO" | "PARTICIPANTE" | "TRABAJADOR" | "USUARIO";
+  socioId?: number | null;
+  participanteId?: number | null;
+  participanteIds: number[];
+  trabajadorId?: number | null;
+}

@@ -1,5 +1,8 @@
 package com.svalero.asociation.controller;
 
+import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.BajaRequestDto;
+import com.svalero.asociation.dto.SocioAccessResponseDto;
 import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.model.Socio;
 import com.svalero.asociation.service.ParticipanteService;
@@ -55,10 +58,10 @@ public class SocioController {
     }
 
     @PostMapping("/v1/socios")
-     public ResponseEntity<Socio> addSocio(@Valid @RequestBody Socio socio) throws MethodArgumentNotValidException {
+     public ResponseEntity<SocioAccessResponseDto> addSocio(@Valid @RequestBody Socio socio) throws MethodArgumentNotValidException {
         logger.info("POST/socios");
-        Socio newsocio = socioService.add(socio);
-        return new ResponseEntity<>(newsocio, HttpStatus.CREATED);
+        SocioAccessResponseDto newSocio = socioService.addWithAccess(socio);
+        return new ResponseEntity<>(newSocio, HttpStatus.CREATED);
     }
 
     @PutMapping("/v1/socios/{id}")
@@ -68,10 +71,24 @@ public class SocioController {
         return ResponseEntity.ok(updatedsocio);
     }
 
-    @DeleteMapping("/v1/socios/{id}")
-    public ResponseEntity<Void> deleteSocio(@PathVariable long id){
-        logger.info("DELETE/socios");
-        socioService.delete(id);
+    @PostMapping("/v1/socios/{id}/access-code")
+    public ResponseEntity<AccessCodeResponseDto> regenerateSocioAccessCode(@PathVariable long id) {
+        logger.info("POST/socios/{id}/access-code");
+        AccessCodeResponseDto accessCode = socioService.regenerateAccessCode(id);
+        return ResponseEntity.ok(accessCode);
+    }
+
+    @PostMapping("/v1/socios/{id}/baja")
+    public ResponseEntity<Void> bajaSocio(@PathVariable long id, @Valid @RequestBody BajaRequestDto bajaRequestDto) {
+        logger.info("POST/socios/{id}/baja");
+        socioService.darDeBaja(id, bajaRequestDto);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/v1/socios/{id}/reactivar")
+    public ResponseEntity<Void> reactivarSocio(@PathVariable long id) {
+        logger.info("POST/socios/{id}/reactivar");
+        socioService.reactivar(id);
         return ResponseEntity.noContent().build();
     }
 

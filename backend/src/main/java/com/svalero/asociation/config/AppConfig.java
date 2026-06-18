@@ -1,25 +1,17 @@
 package com.svalero.asociation.config;
 
 import com.svalero.asociation.dto.ActividadOutDto;
-import com.svalero.asociation.dto.EstadoSocioDto;
 import com.svalero.asociation.dto.ParticipanteDto;
 import com.svalero.asociation.dto.ParticipanteOutDto;
 import com.svalero.asociation.dto.ServicioOutDto;
 import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.dto.TrabajadorOutDto;
-import com.svalero.asociation.dto.UbicacionDto;
-import com.svalero.asociation.dto.UbicacionOutDto;
 import com.svalero.asociation.model.Actividad;
 import com.svalero.asociation.model.InscripcionActividad;
 import com.svalero.asociation.model.Participante;
 import com.svalero.asociation.model.Servicio;
 import com.svalero.asociation.model.Socio;
 import com.svalero.asociation.model.Trabajador;
-import com.svalero.asociation.model.Ubicacion;
-import com.svalero.asociation.modelv2.ActividadDtoV2;
-import com.svalero.asociation.modelv2.ActividadOutDtoV2;
-import com.svalero.asociation.modelv2.SocioOutDtoV2;
-import com.svalero.asociation.service.EstadoSocioService;
 import org.modelmapper.Converter;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
@@ -33,7 +25,7 @@ import java.util.Objects;
 public class AppConfig {
 
     @Bean
-    public ModelMapper modelMapper(EstadoSocioService estadoSocioService){
+    public ModelMapper modelMapper() {
 
         ModelMapper modelMapper = new ModelMapper();
         modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
@@ -59,16 +51,6 @@ public class AppConfig {
         Converter<Servicio, ServicioOutDto> servicioToServicioOutDto = context ->
                 context.getSource() == null ? null : modelMapper.map(context.getSource(), ServicioOutDto.class);
 
-        Converter<Socio, EstadoSocioDto> socioToEstadoSocioDto = context ->
-                context.getSource() == null ? null :
-                        estadoSocioService.calcularEstado(modelMapper.map(context.getSource(), SocioDto.class));
-
-        Converter<UbicacionDto, Ubicacion> ubicacionDtoToUbicacion = context ->
-                context.getSource() == null ? null : modelMapper.map(context.getSource(), Ubicacion.class);
-
-        Converter<Ubicacion, UbicacionOutDto> ubicacionToUbicacionOutDto = context ->
-                context.getSource() == null ? null : modelMapper.map(context.getSource(), UbicacionOutDto.class);
-
         modelMapper.typeMap(Participante.class, ParticipanteDto.class).addMappings(mapper -> {
             mapper.using(socioToId).map(Participante::getSocio, ParticipanteDto::setSocioID);
         });
@@ -81,22 +63,8 @@ public class AppConfig {
             mapper.map(Socio::getParticipanteList, SocioDto::setParticipanteDtoList);
         });
 
-        modelMapper.typeMap(Socio.class, SocioOutDtoV2.class).addMappings(mapper -> {
-            mapper.map(Socio::getParticipanteList, SocioOutDtoV2::setParticipanteDtoList);
-            mapper.using(socioToEstadoSocioDto).map(src -> src, SocioOutDtoV2::setEstadoSocioDto);
-        });
-
-        modelMapper.typeMap(Actividad.class, ActividadOutDto.class).addMappings(mapper ->{
+        modelMapper.typeMap(Actividad.class, ActividadOutDto.class).addMappings(mapper -> {
             mapper.using(inscripcionesToParticipantes).map(Actividad::getInscripciones, ActividadOutDto::setParticipanteDtoList);
-        });
-
-        modelMapper.typeMap(ActividadDtoV2.class, Actividad.class).addMappings(mapper -> {
-            mapper.using(ubicacionDtoToUbicacion).map(ActividadDtoV2::getUbicacion, Actividad::setPlace);
-        });
-
-        modelMapper.typeMap(Actividad.class, ActividadOutDtoV2.class).addMappings(mapper -> {
-            mapper.using(inscripcionesToParticipantes).map(Actividad::getInscripciones, ActividadOutDtoV2::setParticipanteDtoList);
-            mapper.using(ubicacionToUbicacionOutDto).map(Actividad::getPlace, ActividadOutDtoV2::setUbicacionOutDto);
         });
 
         modelMapper.typeMap(Servicio.class, ServicioOutDto.class).addMappings(mapper -> {
@@ -107,6 +75,6 @@ public class AppConfig {
             mapper.using(servicioToServicioOutDto).map(Trabajador::getServicios, TrabajadorOutDto::setServicioOutDto);
         });
 
-        return  modelMapper;
+        return modelMapper;
     }
 }

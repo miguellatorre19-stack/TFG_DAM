@@ -3,12 +3,12 @@ package com.svalero.asociation.exception;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
-import com.svalero.asociation.controller.SocioController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConversionException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -23,7 +23,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private final Logger logger = LoggerFactory.getLogger(SocioController.class);
+    private final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ResourceNotFoundException.class)//si el .class deja de ser el padre, se produce error 500
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex) {
@@ -93,13 +93,26 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(BusinessRuleException.class)
-    public ResponseEntity<ErrorResponse> handleBadRequestManual(BusinessRuleException ex) {
-        ErrorResponse error =  ErrorResponse.generalError(409, ex.getMessage(), "Ya hay un usuario con esas credenciales");
-        return new ResponseEntity<>(error, HttpStatus.METHOD_NOT_ALLOWED);
+    public ResponseEntity<ErrorResponse> handleBusinessRule(BusinessRuleException ex) {
+        logger.warn("Business rule violation", ex);
+        ErrorResponse error = ErrorResponse.generalError(409, ex.getMessage(), "Conflict");
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        logger.error("Data integrity violation", ex);
+        ErrorResponse error = ErrorResponse.generalError(
+                409,
+                "No se puede eliminar o modificar este registro porque tiene relaciones asociadas",
+                "Conflict"
+        );
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleGlobalError(Exception ex) {
+        logger.error("Unexpected server error", ex);
         ErrorResponse error =  ErrorResponse.generalError(500, "An unexpected error occurred", "Internal Server Error");
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }

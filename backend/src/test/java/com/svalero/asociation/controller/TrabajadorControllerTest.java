@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.svalero.asociation.dto.BajaRequestDto;
+import com.svalero.asociation.dto.TrabajadorAccessResponseDto;
 import com.svalero.asociation.dto.TrabajadorDto;
 import com.svalero.asociation.dto.TrabajadorOutDto;
 import com.svalero.asociation.exception.TrabajadorNotFoundException;
@@ -27,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -200,11 +203,17 @@ class TrabajadorControllerTest {
     public void testAddTrabajador_Return201() throws Exception {
         TrabajadorDto newTrabajador = new TrabajadorDto("11177777P", "Diana", "Aladia", "email@email", "888-566-323", LocalDate.now().minusDays(1), LocalDate.now(), "Tiempo Completo", 1);
         TrabajadorOutDto createdTrabajador = new TrabajadorOutDto(1, "11177777P", "Diana", "Aladia", "email@email", "888-566-323", LocalDate.now().minusDays(1), LocalDate.now(), "Tiempo Completo", null);
+        TrabajadorAccessResponseDto accessResponse = new TrabajadorAccessResponseDto(
+                createdTrabajador,
+                30L,
+                "email@email",
+                "ABCDE-23456"
+        );
 
         ObjectMapper thisObjectmapper = new ObjectMapper();
         thisObjectmapper.registerModule(new JavaTimeModule());
 
-        when(trabajadorService.addDto(any(TrabajadorDto.class), eq(1L))).thenReturn(createdTrabajador);
+        when(trabajadorService.addDtoWithAccess(any(TrabajadorDto.class), eq(1L))).thenReturn(accessResponse);
 
         String jsonRequest = thisObjectmapper.writeValueAsString(newTrabajador);
 
@@ -217,11 +226,13 @@ class TrabajadorControllerTest {
 
         String jsonResponse = mvcResult.getResponse().getContentAsString();
 
-        TrabajadorOutDto responseTrabajador = thisObjectmapper.readValue(jsonResponse, TrabajadorOutDto.class);
+        TrabajadorAccessResponseDto responseTrabajador = thisObjectmapper.readValue(jsonResponse, TrabajadorAccessResponseDto.class);
 
         assertNotNull(responseTrabajador);
-        assertEquals(1, responseTrabajador.getId());
-        assertEquals("Diana", responseTrabajador.getName());
+        assertEquals(1, responseTrabajador.getTrabajador().getId());
+        assertEquals("Diana", responseTrabajador.getTrabajador().getName());
+        assertEquals(30L, responseTrabajador.getUsuarioId());
+        assertEquals("ABCDE-23456", responseTrabajador.getInitialPassword());
     }
 
     @Test
@@ -281,25 +292,32 @@ class TrabajadorControllerTest {
 
 
     @Test
-    void testDeleteTrabajador_For204() throws Exception{
+    void testBajaTrabajador_For204() throws Exception{
         TrabajadorOutDto selected = new TrabajadorOutDto(1, "11177777P", "Diana", "Aladia", "email@email", "888-566-323", LocalDate.now(), LocalDate.now(), "Tiempo Completo", null);
+        BajaRequestDto bajaRequestDto = new BajaRequestDto("Solicitud interna", LocalDate.now());
 
-        doNothing().when(trabajadorService).delete(selected.getId());
+        doNothing().when(trabajadorService).darDeBaja(eq(selected.getId()), any(BajaRequestDto.class));
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/trabajadores/" + selected.getId())
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/trabajadores/" + selected.getId() + "/baja")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bajaRequestDto))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    void testDeleteTrabajador_For404() throws Exception{
+    void testBajaTrabajador_For404() throws Exception{
         TrabajadorOutDto selected = new TrabajadorOutDto(1, "11177777P", "Diana", "Aladia", "email@email", "888-566-323", LocalDate.now(), LocalDate.now(), "Tiempo Completo", null);
+        BajaRequestDto bajaRequestDto = new BajaRequestDto("Solicitud interna", LocalDate.now());
 
-        doNothing().when(trabajadorService).delete(selected.getId());
+        doThrow(new TrabajadorNotFoundException("Trabajador Not Found"))
+                .when(trabajadorService).darDeBaja(eq(selected.getId()), any(BajaRequestDto.class));
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/trabajadores/" + selected.getId())
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/trabajadores/" + selected.getId() + "/baja")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bajaRequestDto))
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isNotFound());
     }
 }
 

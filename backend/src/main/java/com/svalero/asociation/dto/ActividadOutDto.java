@@ -14,7 +14,10 @@ public class ActividadOutDto {
     private long id;
     private String description;
     private LocalDate dayActivity;
+    private String typeActivity;
     private Float duration;
     private Boolean canJoin;
+    private Integer capacity;
+    private String status;
     private List<ParticipanteDto> participanteDtoList;
 }

@@ -25,7 +25,6 @@ public class ParticipanteDto {
     @NotBlank(message = "debe tener email")
     private String email;
     @Pattern(regexp="\\d{3}-\\d{3}-\\d{3}")
-    @NotBlank(message = "debe tener nº de teléfono")
     private String phoneNumber;
     @Past
     @JsonFormat(pattern = "yyyy-MM-dd")
@@ -34,3 +33,4 @@ public class ParticipanteDto {
     private String typeRel;
     private long socioID;
 }
+

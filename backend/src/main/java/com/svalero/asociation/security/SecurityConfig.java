@@ -3,6 +3,7 @@ package com.svalero.asociation.security;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -16,10 +17,14 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
 import java.util.List;
 
 @Configuration
 public class SecurityConfig {
+
+    @Value("${app.cors.allowed-origin:http://localhost:3000}")
+    private String allowedOrigin;
 
     @Bean
     @Profile("test")
@@ -51,20 +56,59 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
 
+                        .requestMatchers(HttpMethod.GET, "/api/v1/servicios/*/solicitudes")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/servicios/*/solicitudes")
+                        .hasAnyRole("SOCIO", "PARTICIPANTE")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/servicios/*/solicitudes/*")
+                        .denyAll()
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/servicios/*/solicitudes/*")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/servicios", "/api/v1/servicios/**")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO", "PARTICIPANTE")
+
                         .requestMatchers("/api/v1/servicios", "/api/v1/servicios/**")
-                        .hasAnyRole("ADMIN", "TRABAJADOR")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
+
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/socios/*/baja",
+                                "/api/v1/socios/*/reactivar",
+                                "/api/v1/participantes/*/baja",
+                                "/api/v1/participantes/*/reactivar",
+                                "/api/v1/trabajadores/*/baja",
+                                "/api/v1/trabajadores/*/reactivar"
+                        ).hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
 
                         .requestMatchers("/api/v1/trabajadores", "/api/v1/trabajadores/**")
                         .hasRole("ADMIN")
 
                         .requestMatchers("/api/v1/socios", "/api/v1/socios/**")
-                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO", "PARTICIPANTE")
 
                         .requestMatchers("/api/v1/participantes", "/api/v1/participantes/**")
-                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO", "PARTICIPANTE")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/actividades/*/inscripciones")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/actividades/*/inscripciones")
+                        .hasAnyRole("SOCIO", "PARTICIPANTE", "VOLUNTARIO")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/actividades/*/inscripciones/*")
+                        .denyAll()
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/actividades/*/inscripciones/*")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/actividades", "/api/v1/actividades/**")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO", "PARTICIPANTE", "VOLUNTARIO")
 
                         .requestMatchers("/api/v1/actividades", "/api/v1/actividades/**")
-                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR", "SOCIO", "VOLUNTARIO")
+                        .hasAnyRole("ADMIN", "ADMINISTRATIVA", "TRABAJADOR")
 
                         .anyRequest().authenticated()
                 )
@@ -96,7 +140,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:3000"
+                allowedOrigin
         ));
 
         configuration.setAllowedMethods(List.of(

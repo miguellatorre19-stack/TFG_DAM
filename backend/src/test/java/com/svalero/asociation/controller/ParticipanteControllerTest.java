@@ -2,6 +2,8 @@ package com.svalero.asociation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.svalero.asociation.dto.BajaRequestDto;
+import com.svalero.asociation.dto.ParticipanteAccessResponseDto;
 import com.svalero.asociation.dto.ParticipanteDto;
 import com.svalero.asociation.dto.ParticipanteOutDto;
 import com.svalero.asociation.exception.ParticipanteNotFoundException;
@@ -119,20 +121,27 @@ class ParticipanteControllerTest {
     @Test
     void addParticipanteDtoReturns201() throws Exception {
         ParticipanteDto requestDto = buildParticipanteDto("77777777U", "Alberto", 33L);
-        Participante participanteSaved = buildParticipante(10L, "77777777U", "Alberto", 1L);
         ParticipanteDto mappedResponse = buildParticipanteDto("77777777U", "Alberto", 1L);
+        ParticipanteAccessResponseDto accessResponse = new ParticipanteAccessResponseDto(
+                mappedResponse,
+                20L,
+                "alberto@email.com",
+                "ABCDE-23456"
+        );
 
-        when(participanteService.addDto(any(ParticipanteDto.class), eq(1L))).thenReturn(participanteSaved);
-        when(modelMapper.map(participanteSaved, ParticipanteDto.class)).thenReturn(mappedResponse);
+        when(participanteService.addDtoWithAccess(any(ParticipanteDto.class), eq(1L))).thenReturn(accessResponse);
 
         mockMvc.perform(post("/api/v1/socios/1/participante")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.dni").value("77777777U"))
-                .andExpect(jsonPath("$.name").value("Alberto"))
-                .andExpect(jsonPath("$.socioID").value(33));
+                .andExpect(jsonPath("$.participante.dni").value("77777777U"))
+                .andExpect(jsonPath("$.participante.name").value("Alberto"))
+                .andExpect(jsonPath("$.participante.socioID").value(1))
+                .andExpect(jsonPath("$.usuarioId").value(20))
+                .andExpect(jsonPath("$.email").value("alberto@email.com"))
+                .andExpect(jsonPath("$.initialPassword").value("ABCDE-23456"));
     }
 
     @Test
@@ -167,18 +176,27 @@ class ParticipanteControllerTest {
     }
 
     @Test
-    void deleteParticipanteReturns204() throws Exception {
-        doNothing().when(participanteService).delete(1L);
+    void bajaParticipanteReturns204() throws Exception {
+        BajaRequestDto bajaRequestDto = new BajaRequestDto("Solicitud familiar", LocalDate.now());
+        doNothing().when(participanteService).darDeBaja(eq(1L), any(BajaRequestDto.class));
 
-        mockMvc.perform(delete("/api/v1/participantes/1").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/api/v1/participantes/1/baja")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bajaRequestDto))
+                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    void deleteParticipanteReturns404() throws Exception {
-        doThrow(new ParticipanteNotFoundException("Participante no encontrado")).when(participanteService).delete(1L);
+    void bajaParticipanteReturns404() throws Exception {
+        BajaRequestDto bajaRequestDto = new BajaRequestDto("Solicitud familiar", LocalDate.now());
+        doThrow(new ParticipanteNotFoundException("Participante no encontrado"))
+                .when(participanteService).darDeBaja(eq(1L), any(BajaRequestDto.class));
 
-        mockMvc.perform(delete("/api/v1/participantes/1").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/api/v1/participantes/1/baja")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bajaRequestDto))
+                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
 

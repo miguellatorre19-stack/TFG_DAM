@@ -3,6 +3,7 @@ package com.svalero.asociation.service;
 import com.svalero.asociation.dto.InscripcionActividadOutDto;
 import com.svalero.asociation.dto.ParticipanteDto;
 import com.svalero.asociation.exception.ActividadNotFoundException;
+import com.svalero.asociation.exception.BusinessRuleException;
 import com.svalero.asociation.exception.ParticipanteNotFoundException;
 import com.svalero.asociation.model.Actividad;
 import com.svalero.asociation.model.InscripcionActividad;
@@ -35,6 +36,10 @@ public class InscripcionActividadService {
 
     @Transactional
     public void inscribir(long actividadId, long participanteId, String state, float price) {
+        if (inscripcionActividadRepository.existsByActividadIdAndParticipanteId(actividadId, participanteId)) {
+            throw new BusinessRuleException("El participante ya esta inscrito en esta actividad");
+        }
+
         Actividad actividad = actividadRepository.findById(actividadId)
                 .orElseThrow(() -> new ActividadNotFoundException("Actividad con ID:" + actividadId + " no encontrada"));
         Participante participante = participanteRepository.findById(participanteId)
@@ -50,9 +55,33 @@ public class InscripcionActividadService {
     }
 
     @Transactional
+    public InscripcionActividadOutDto modify(long actividadId, long inscripcionId, long participanteId, String state,
+            float price) {
+        InscripcionActividad inscripcion = inscripcionActividadRepository.findByIdAndActividadId(inscripcionId, actividadId)
+                .orElseThrow(() -> new ActividadNotFoundException("Inscripcion de actividad no encontrada"));
+
+        Participante participante = participanteRepository.findById(participanteId)
+                .orElseThrow(() -> new ParticipanteNotFoundException("Participante con ID:" + participanteId + " no encontrado"));
+
+        inscripcion.setParticipante(participante);
+        inscripcion.setState(state);
+        inscripcion.setPrice(price);
+
+        return toDto(inscripcionActividadRepository.save(inscripcion));
+    }
+
+    @Transactional
     public void deleteInscripcion(long actividadId, long inscripcionId) {
-        inscripcionActividadRepository.deleteByIdAndActividadId(inscripcionId, actividadId);
-        logger.info("Inscripcion ID {} deleted from actividad ID {}", inscripcionId, actividadId);
+        InscripcionActividad inscripcion = inscripcionActividadRepository.findByIdAndActividadId(inscripcionId, actividadId)
+                .orElseThrow(() -> new ActividadNotFoundException("Inscripcion de actividad no encontrada"));
+
+        if ("CANCELLED".equalsIgnoreCase(inscripcion.getState())) {
+            throw new BusinessRuleException("La inscripcion de actividad con ID " + inscripcionId + " ya fue cancelada");
+        }
+
+        inscripcion.setState("CANCELLED");
+        inscripcionActividadRepository.save(inscripcion);
+        logger.info("Inscripcion ID {} cancelled from actividad ID {}", inscripcionId, actividadId);
     }
 
     public List<ParticipanteDto> listarParticipantes(long actividadId) {
@@ -64,13 +93,17 @@ public class InscripcionActividadService {
 
     public List<InscripcionActividadOutDto> listarInscripciones(long actividadId) {
         return inscripcionActividadRepository.findByActividadId(actividadId).stream()
-                .map(inscripcion -> new InscripcionActividadOutDto(
-                        inscripcion.getId(),
-                        inscripcion.getCreatedAt(),
-                        inscripcion.getState(),
-                        inscripcion.getPrice(),
-                        inscripcion.getParticipante().getId()
-                ))
+                .map(this::toDto)
                 .toList();
+    }
+
+    private InscripcionActividadOutDto toDto(InscripcionActividad inscripcion) {
+        return new InscripcionActividadOutDto(
+                inscripcion.getId(),
+                inscripcion.getCreatedAt(),
+                inscripcion.getState(),
+                inscripcion.getPrice(),
+                inscripcion.getParticipante().getId()
+        );
     }
 }

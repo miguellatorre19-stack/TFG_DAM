@@ -1,7 +1,11 @@
 package com.svalero.asociation.controller;
 
+import com.svalero.asociation.dto.ParticipanteDto;
+import com.svalero.asociation.dto.SolicitudServicioOutDto;
+import com.svalero.asociation.dto.SolicitudServicioRequestDto;
 import com.svalero.asociation.dto.ServicioDto;
 import com.svalero.asociation.dto.ServicioOutDto;
+import com.svalero.asociation.service.SolicitudServicioService;
 import com.svalero.asociation.service.ServicioService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -19,16 +23,21 @@ import java.util.List;
 public class ServicioController {
     @Autowired
     private ServicioService servicioService;
+    @Autowired
+    private SolicitudServicioService solicitudServicioService;
 
-    private final Logger logger = LoggerFactory.getLogger(SocioController.class);
+    private final Logger logger = LoggerFactory.getLogger(ServicioController.class);
 
 
     @GetMapping("/v1/servicios")
     public ResponseEntity<List<ServicioOutDto>> getAll(
             @RequestParam(value = "periodicity", required = false)String periodicity,
             @RequestParam(value="capacity", required = false) Integer capacity,
-            @RequestParam(value="duration", required = false) Float duration ){
-        List<ServicioOutDto> allservicios = servicioService.findAllDto(periodicity, capacity, duration);
+            @RequestParam(value="duration", required = false) Float duration,
+            @RequestParam(value="archived", required = false) Boolean archived ){
+        List<ServicioOutDto> allservicios = archived == null
+                ? servicioService.findAllDto(periodicity, capacity, duration)
+                : servicioService.findAllDto(periodicity, capacity, duration, archived);
         logger.info("GET/servicios");
         return ResponseEntity.ok(allservicios);
     }
@@ -51,6 +60,27 @@ public class ServicioController {
         return new ResponseEntity<>(newservicio, HttpStatus.CREATED);
     }
 
+    @PostMapping("/v1/servicios/{id}/solicitudes")
+    public ResponseEntity<Void> crearSolicitud(@PathVariable long id,
+            @Valid @RequestBody SolicitudServicioRequestDto requestDto) throws MethodArgumentNotValidException {
+        solicitudServicioService.crearSolicitud(id, requestDto.getParticipanteId(), requestDto.getState(), requestDto.getPrice());
+        logger.info("POST/servicios/{id}/solicitudes");
+        return new ResponseEntity<>(HttpStatus.CREATED);
+    }
+
+    @GetMapping("/v1/servicios/{id}/participantes")
+    public ResponseEntity<List<ParticipanteDto>> getParticipantesByServicio(@PathVariable long id) {
+        List<ParticipanteDto> participantes = solicitudServicioService.listarParticipantes(id);
+        logger.info("GET/servicios/{id}/participantes");
+        return ResponseEntity.ok(participantes);
+    }
+
+    @GetMapping("/v1/servicios/{id}/solicitudes")
+    public ResponseEntity<List<SolicitudServicioOutDto>> getSolicitudesByServicio(@PathVariable long id) {
+        List<SolicitudServicioOutDto> solicitudes = solicitudServicioService.listarSolicitudes(id);
+        logger.info("GET/servicios/{id}/solicitudes");
+        return ResponseEntity.ok(solicitudes);
+    }
 
     @PutMapping("/v1/servicios/{id}")
     public ResponseEntity<ServicioOutDto> editServicio(@PathVariable long id, @Valid @RequestBody ServicioDto servicioDto) throws MethodArgumentNotValidException{
@@ -59,10 +89,32 @@ public class ServicioController {
         return ResponseEntity.ok(updatedservicio);
     }
 
+    @PutMapping("/v1/servicios/{idServicio}/solicitudes/{idSolicitud}")
+    public ResponseEntity<SolicitudServicioOutDto> editarSolicitud(@PathVariable long idServicio,
+            @PathVariable long idSolicitud, @Valid @RequestBody SolicitudServicioRequestDto requestDto)
+            throws MethodArgumentNotValidException {
+        SolicitudServicioOutDto updatedSolicitud = solicitudServicioService.modificarSolicitud(
+                idServicio,
+                idSolicitud,
+                requestDto.getParticipanteId(),
+                requestDto.getState(),
+                requestDto.getPrice()
+        );
+        logger.info("PUT/servicios/{idServicio}/solicitudes/{idSolicitud}");
+        return ResponseEntity.ok(updatedSolicitud);
+    }
+
     @DeleteMapping("/v1/servicios/{id}")
     public ResponseEntity<Void> deleteServicio (@PathVariable long id){
         servicioService.delete(id);
         logger.info("DELETE/servicios/{id}");
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/v1/servicios/{idServicio}/solicitudes/{idSolicitud}")
+    public ResponseEntity<Void> cancelarSolicitud(@PathVariable long idServicio, @PathVariable long idSolicitud){
+        solicitudServicioService.cancelarSolicitud(idServicio, idSolicitud);
+        logger.info("DELETE/servicios/{idServicio}/solicitudes/{idSolicitud}");
         return ResponseEntity.noContent().build();
     }
 

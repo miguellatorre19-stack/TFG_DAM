@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface SocioRepository extends CrudRepository<Socio, Long> {
@@ -20,20 +21,20 @@ public interface SocioRepository extends CrudRepository<Socio, Long> {
     List<Socio>findByEntryDateAfter(LocalDate entryDate);
     boolean existsBydni(@Pattern(regexp = "\\d{8}[A-Z]") @NotBlank String dni);
 
+    @Override
+    @EntityGraph(attributePaths = {"participanteList", "participanteList.usuario", "usuario"})
+    Optional<Socio> findById(Long id);
+
+    @EntityGraph(attributePaths = "participanteList")
+    Optional<Socio> findByUsuarioEmail(String email);
+
     @Query("SELECT s FROM socio s WHERE " +
             "(:familyModel IS NULL OR s.familyModel = :familyModel) AND " +
-            "(:active IS NULL OR s.active = :active) AND " +
+            "((:active IS NULL AND COALESCE(s.active, true) = true) OR (:active IS NOT NULL AND COALESCE(s.active, true) = :active)) AND " +
             "(:entryDate IS NULL OR s.entryDate >= :entryDate)")
     @EntityGraph(attributePaths = "participanteList")
     List<Socio> findByFilters(@Param("familyModel") String familyModel,
                               @Param("active") Boolean active,
-                              @Param("entryDate") LocalDate entryDate);
-
-    @Query("SELECT s FROM socio s WHERE " +
-            "(:familyModel IS NULL OR s.familyModel = :familyModel) AND " +
-             "(:entryDate IS NULL OR s.entryDate >= :entryDate)")
-    @EntityGraph(attributePaths = "participanteList")
-    List<Socio> findByFiltersV2(@Param("familyModel") String familyModel,
                               @Param("entryDate") LocalDate entryDate);
 }
 

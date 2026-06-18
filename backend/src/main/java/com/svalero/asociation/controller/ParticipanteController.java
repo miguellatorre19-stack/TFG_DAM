@@ -1,5 +1,8 @@
 package com.svalero.asociation.controller;
 
+import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.BajaRequestDto;
+import com.svalero.asociation.dto.ParticipanteAccessResponseDto;
 import com.svalero.asociation.dto.ParticipanteDto;
 import com.svalero.asociation.dto.ParticipanteOutDto;
 import com.svalero.asociation.dto.SocioDto;
@@ -38,9 +41,12 @@ public class ParticipanteController {
     public ResponseEntity<List<ParticipanteOutDto>> getAll(
             @RequestParam(value = "birthDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate birthDate,
             @RequestParam(value = "name", required = false) String name,
-            @RequestParam(value = "typeRel",required = false) String typeRel)
+            @RequestParam(value = "typeRel",required = false) String typeRel,
+            @RequestParam(value = "active", required = false) Boolean active)
     {
-        List<ParticipanteOutDto> allparticipantes = participanteService.findAll(birthDate, name, typeRel);
+        List<ParticipanteOutDto> allparticipantes = active == null
+                ? participanteService.findAll(birthDate, name, typeRel)
+                : participanteService.findAll(birthDate, name, typeRel, active);
 
         logger.info("GET/participantes");
         return ResponseEntity.ok(allparticipantes);
@@ -59,29 +65,48 @@ public class ParticipanteController {
     }
 
     @PostMapping("/v1/socios/{id}/participante")
-    public ResponseEntity<ParticipanteDto> addParticipante(@Valid@RequestBody ParticipanteDto participanteDto, @PathVariable long id) throws SocioNotFoundException, ParticipanteNotFoundException, MethodArgumentNotValidException {
+    public ResponseEntity<ParticipanteAccessResponseDto> addParticipante(@Valid@RequestBody ParticipanteDto participanteDto, @PathVariable long id) throws SocioNotFoundException, ParticipanteNotFoundException, MethodArgumentNotValidException {
 
-        Participante newparticipante = participanteService.addDto(participanteDto, id);
-        ParticipanteDto participanteDtoFinal = modelMapper.map(newparticipante, ParticipanteDto.class);
-        participanteDtoFinal.setSocioID(participanteDto.getSocioID());
-        return new ResponseEntity<>(participanteDtoFinal, HttpStatus.CREATED);
+        ParticipanteAccessResponseDto newparticipante = participanteService.addDtoWithAccess(participanteDto, id);
+        return new ResponseEntity<>(newparticipante, HttpStatus.CREATED);
     }
 
     @PutMapping("/v1/participantes/{id}")
     public ResponseEntity<ParticipanteDto> editParticipante(@PathVariable long id, @Valid@RequestBody ParticipanteDto participanteDto) throws MethodArgumentNotValidException{
 
         Participante updatedparticipante = participanteService.modifyDto(id, participanteDto);
-        ParticipanteDto participanteDtoUpdated = modelMapper.map(updatedparticipante, ParticipanteDto.class);
+        ParticipanteDto participanteDtoUpdated = new ParticipanteDto();
+        participanteDtoUpdated.setDni(updatedparticipante.getDni());
+        participanteDtoUpdated.setName(updatedparticipante.getName());
+        participanteDtoUpdated.setSurname(updatedparticipante.getSurname());
+        participanteDtoUpdated.setEmail(updatedparticipante.getEmail());
+        participanteDtoUpdated.setPhoneNumber(updatedparticipante.getPhoneNumber());
+        participanteDtoUpdated.setBirthDate(updatedparticipante.getBirthDate());
+        participanteDtoUpdated.setNeeds(updatedparticipante.getNeeds());
+        participanteDtoUpdated.setTypeRel(updatedparticipante.getTypeRel());
         participanteDtoUpdated.setSocioID(participanteDto.getSocioID());
         logger.info("PUT/participantes/{id}");
         return ResponseEntity.ok(participanteDtoUpdated);
     }
 
-    @DeleteMapping("/v1/participantes/{id}")
-    public ResponseEntity<Void> deleteParticipante (@PathVariable long id){
+    @PostMapping("/v1/participantes/{id}/access-code")
+    public ResponseEntity<AccessCodeResponseDto> regenerateParticipanteAccessCode(@PathVariable long id) {
+        logger.info("POST/participantes/{id}/access-code");
+        AccessCodeResponseDto accessCode = participanteService.regenerateAccessCode(id);
+        return ResponseEntity.ok(accessCode);
+    }
 
-        participanteService.delete(id);
-        logger.info("DELETE/participantes/{id}");
+    @PostMapping("/v1/participantes/{id}/baja")
+    public ResponseEntity<Void> bajaParticipante(@PathVariable long id, @Valid @RequestBody BajaRequestDto bajaRequestDto) {
+        participanteService.darDeBaja(id, bajaRequestDto);
+        logger.info("POST/participantes/{id}/baja");
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/v1/participantes/{id}/reactivar")
+    public ResponseEntity<Void> reactivarParticipante(@PathVariable long id) {
+        participanteService.reactivar(id);
+        logger.info("POST/participantes/{id}/reactivar");
         return ResponseEntity.noContent().build();
     }
 }

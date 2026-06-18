@@ -1,12 +1,18 @@
 package com.svalero.asociation.service;
 
+import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.AccessCredentialsDto;
+import com.svalero.asociation.dto.BajaRequestDto;
+import com.svalero.asociation.dto.ParticipanteAccessResponseDto;
 import com.svalero.asociation.dto.ParticipanteDto;
 import com.svalero.asociation.dto.ParticipanteOutDto;
-import com.svalero.asociation.dto.SocioDto;
 import com.svalero.asociation.exception.BusinessRuleException;
 import com.svalero.asociation.exception.ParticipanteNotFoundException;
 import com.svalero.asociation.model.Participante;
 import com.svalero.asociation.model.Socio;
+import com.svalero.asociation.model.Usuario;
+import com.svalero.asociation.repository.InscripcionActividadRepository;
+import com.svalero.asociation.repository.SolicitudServicioRepository;
 import com.svalero.asociation.repository.ParticipanteRepository;
 import com.svalero.asociation.repository.SocioRepository;
 import org.junit.jupiter.api.Test;
@@ -16,20 +22,20 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 
-import java.lang.reflect.Type;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -50,7 +56,13 @@ class ParticipanteServiceTest {
     private ModelMapper modelMapper;
 
     @Mock
-    private SocioService socioService;
+    private AccessUserService accessUserService;
+
+    @Mock
+    private InscripcionActividadRepository inscripcionActividadRepository;
+
+    @Mock
+    private SolicitudServicioRepository solicitudServicioRepository;
 
     @Test
     void testFindAll() {
@@ -59,36 +71,28 @@ class ParticipanteServiceTest {
         Participante p2 = buildParticipante(2L, "88888888P", "Roberto", 20L);
         List<Participante> participantes = List.of(p1, p2);
 
-        ParticipanteOutDto dto1 = buildParticipanteOutDto(1L, "77777777U", "Alberto", 10L);
-        ParticipanteOutDto dto2 = buildParticipanteOutDto(2L, "88888888P", "Roberto", 20L);
-        List<ParticipanteOutDto> expected = List.of(dto1, dto2);
-
         when(participanteRepository.findByFilters(birthDate, "Alberto", "hijo")).thenReturn(participantes);
-        doReturn(expected).when(modelMapper).map(eq(participantes), any(Type.class));
 
         List<ParticipanteOutDto> result = participanteService.findAll(birthDate, "Alberto", "hijo");
 
         assertEquals(2, result.size());
         assertEquals("Alberto", result.get(0).getName());
+        assertEquals(10L, result.get(0).getSocioID());
 
         verify(participanteRepository).findByFilters(birthDate, "Alberto", "hijo");
-        verify(modelMapper).map(eq(participantes), any(Type.class));
     }
 
     @Test
     void testFindById() {
         Participante participante = buildParticipante(1L, "77777777U", "Alberto", 1L);
-        ParticipanteDto dto = buildParticipanteDto("77777777U", "Alberto", 1L);
-
         when(participanteRepository.findById(1L)).thenReturn(Optional.of(participante));
-        when(modelMapper.map(participante, ParticipanteDto.class)).thenReturn(dto);
 
         ParticipanteDto result = participanteService.findById(1L);
 
         assertEquals("Alberto", result.getName());
         assertEquals("77777777U", result.getDni());
+        assertEquals(1L, result.getSocioID());
         verify(participanteRepository).findById(1L);
-        verify(modelMapper).map(participante, ParticipanteDto.class);
     }
 
     @Test
@@ -100,7 +104,6 @@ class ParticipanteServiceTest {
 
         assertTrue(ex.getMessage().contains("99"));
         verify(participanteRepository).findById(99L);
-        verify(modelMapper, never()).map(any(), eq(ParticipanteDto.class));
     }
 
 
@@ -110,9 +113,6 @@ class ParticipanteServiceTest {
 
         Socio socio = new Socio();
         socio.setId(1L);
-
-        SocioDto socioDto = new SocioDto();
-        socioDto.setId(1L);
 
         doAnswer(invocation -> {
             ParticipanteDto source = invocation.getArgument(0);
@@ -131,7 +131,6 @@ class ParticipanteServiceTest {
         }).when(modelMapper).map(eq(participanteDto), any(Participante.class));
 
         when(participanteRepository.existsBydni("77777777U")).thenReturn(false);
-        when(socioService.findById(1L)).thenReturn(socioDto);
         when(socioRepository.findById(1L)).thenReturn(Optional.of(socio));
         when(participanteRepository.save(any(Participante.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -143,7 +142,6 @@ class ParticipanteServiceTest {
 
         verify(modelMapper).map(eq(participanteDto), any(Participante.class));
         verify(participanteRepository).existsBydni("77777777U");
-        verify(socioService).findById(1L);
         verify(socioRepository).findById(1L);
         verify(participanteRepository).save(any(Participante.class));
     }
@@ -187,24 +185,132 @@ class ParticipanteServiceTest {
     }
 
     @Test
-    void testDelete() {
-        Participante participante = buildParticipante(1L, "77777777U", "Alberto", 1L);
-        when(participanteRepository.findById(1L)).thenReturn(Optional.of(participante));
+    void testAddDtoWithAccess() {
+        ParticipanteDto participanteDto = buildParticipanteDto("77777777U", "Alberto", 1L);
+        Socio socio = new Socio();
+        socio.setId(1L);
+        Usuario usuario = Usuario.builder()
+                .id(8L)
+                .name("Alberto Gomara")
+                .email("email@email.com")
+                .password("encoded-password")
+                .active(true)
+                .build();
 
-        participanteService.delete(1L);
+        doAnswer(invocation -> {
+            ParticipanteDto source = invocation.getArgument(0);
+            Participante target = invocation.getArgument(1);
+            target.setDni(source.getDni());
+            target.setName(source.getName());
+            target.setSurname(source.getSurname());
+            target.setEmail(source.getEmail());
+            target.setPhoneNumber(source.getPhoneNumber());
+            target.setBirthDate(source.getBirthDate());
+            target.setNeeds(source.getNeeds());
+            target.setTypeRel(source.getTypeRel());
+            return null;
+        }).when(modelMapper).map(eq(participanteDto), any(Participante.class));
 
-        verify(participanteRepository).findById(1L);
-        verify(participanteRepository).delete(participante);
+        when(participanteRepository.existsBydni("77777777U")).thenReturn(false);
+        when(socioRepository.findById(1L)).thenReturn(Optional.of(socio));
+        when(accessUserService.createAccessUser("Alberto Gomara", "email@email.com", "PARTICIPANTE"))
+                .thenReturn(new AccessCredentialsDto(usuario, "ABCDE-23456"));
+        when(participanteRepository.save(any(Participante.class))).thenAnswer(i -> i.getArgument(0));
+        ParticipanteAccessResponseDto response = participanteService.addDtoWithAccess(participanteDto, 1L);
+
+        assertEquals(8L, response.getUsuarioId());
+        assertEquals("ABCDE-23456", response.getInitialPassword());
+        assertEquals("email@email.com", response.getEmail());
+        assertEquals(1L, response.getParticipante().getSocioID());
+        verify(accessUserService).createAccessUser("Alberto Gomara", "email@email.com", "PARTICIPANTE");
     }
 
     @Test
-    void testDeleteNotFound() {
+    void testRegenerateAccessCodeExistingUser() {
+        Participante participante = buildParticipante(1L, "77777777U", "Alberto", 1L);
+        Usuario usuario = Usuario.builder()
+                .id(8L)
+                .name("Alberto Gomara")
+                .email("email@email.com")
+                .password("encoded-password")
+                .active(true)
+                .build();
+        participante.setUsuario(usuario);
+
+        when(participanteRepository.findById(1L)).thenReturn(Optional.of(participante));
+        when(accessUserService.regenerateAccessCode(usuario))
+                .thenReturn(new AccessCredentialsDto(usuario, "ZXCVB-12345"));
+
+        AccessCodeResponseDto response = participanteService.regenerateAccessCode(1L);
+
+        assertEquals(8L, response.getUsuarioId());
+        assertEquals("ZXCVB-12345", response.getInitialPassword());
+        verify(accessUserService).regenerateAccessCode(usuario);
+    }
+
+    @Test
+    void testDarDeBaja() {
+        Participante participante = buildParticipante(1L, "77777777U", "Alberto", 1L);
+        Usuario usuario = Usuario.builder().id(8L).email("email@email.com").build();
+        participante.setUsuario(usuario);
+        when(participanteRepository.findById(1L)).thenReturn(Optional.of(participante));
+        when(participanteRepository.save(participante)).thenReturn(participante);
+
+        participanteService.darDeBaja(1L, new BajaRequestDto("Cambio de situacion familiar", LocalDate.now().minusDays(1)));
+
+        verify(participanteRepository).findById(1L);
+        assertFalse(participante.getActive());
+        assertNotNull(participante.getOutDate());
+        assertEquals(LocalDate.now().minusDays(1), participante.getOutDate());
+        assertEquals("Cambio de situacion familiar", participante.getReason());
+        verify(participanteRepository).save(participante);
+        verify(accessUserService).deactivateAccessUser(usuario);
+        verify(participanteRepository, never()).delete(participante);
+    }
+
+    @Test
+    void testDarDeBajaNotFound() {
         when(participanteRepository.findById(100L)).thenReturn(Optional.empty());
 
-        assertThrows(ParticipanteNotFoundException.class, () -> participanteService.delete(100L));
+        assertThrows(ParticipanteNotFoundException.class, () -> participanteService.darDeBaja(100L, new BajaRequestDto("Motivo", LocalDate.now())));
 
         verify(participanteRepository).findById(100L);
-        verify(participanteRepository, never()).delete(any(Participante.class));
+        verify(participanteRepository, never()).save(any(Participante.class));
+    }
+
+    @Test
+    void testReactivate() {
+        Participante participante = buildParticipante(1L, "77777777U", "Alberto", 1L);
+        participante.setActive(false);
+        participante.setOutDate(LocalDate.now().minusDays(1));
+        participante.setReason("Baja voluntaria");
+        Usuario usuario = Usuario.builder().id(8L).email("email@email.com").active(false).build();
+        participante.setUsuario(usuario);
+
+        when(participanteRepository.findById(1L)).thenReturn(Optional.of(participante));
+        when(participanteRepository.save(participante)).thenReturn(participante);
+
+        participanteService.reactivar(1L);
+
+        assertTrue(participante.getActive());
+        assertNull(participante.getOutDate());
+        assertNull(participante.getReason());
+        verify(accessUserService).reactivateAccessUser(usuario);
+        verify(participanteRepository).save(participante);
+    }
+
+    @Test
+    void testReactivateFailsWhenSocioIsInactive() {
+        Participante participante = buildParticipante(1L, "77777777U", "Alberto", 1L);
+        participante.setActive(false);
+        participante.getSocio().setActive(false);
+
+        when(participanteRepository.findById(1L)).thenReturn(Optional.of(participante));
+
+        assertThrows(BusinessRuleException.class, () -> participanteService.reactivar(1L));
+
+        verify(participanteRepository, never()).save(any(Participante.class));
+        verify(accessUserService, never()).reactivateAccessUser(any());
     }
 
     private Participante buildParticipante(long id, String dni, String name, long socioId) {
@@ -219,6 +325,7 @@ class ParticipanteServiceTest {
         participante.setEntryDate(LocalDate.of(2025, 1, 1));
         participante.setNeeds("ninguna");
         participante.setTypeRel("hijo");
+        participante.setActive(true);
         Socio socio = new Socio();
         socio.setId(socioId);
         participante.setSocio(socio);

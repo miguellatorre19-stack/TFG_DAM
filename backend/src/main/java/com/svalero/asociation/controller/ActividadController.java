@@ -36,9 +36,12 @@ public class ActividadController {
     public ResponseEntity<List<ActividadOutDto>> getAllv1(
             @RequestParam(value = "dayActivity", required = false) @DateTimeFormat (iso = DateTimeFormat.ISO.DATE) LocalDate dayActivity,
             @RequestParam(value = "canJoin", required = false) Boolean canJoin,
-            @RequestParam(value = "duration", required = false) Float duration){
+            @RequestParam(value = "duration", required = false) Float duration,
+            @RequestParam(value = "archived", required = false) Boolean archived){
         logger.info("GET/actividades");
-        List<ActividadOutDto> allactividades = actividadService.findAll(dayActivity, canJoin, duration);
+        List<ActividadOutDto> allactividades = archived == null
+                ? actividadService.findAll(dayActivity, canJoin, duration)
+                : actividadService.findAll(dayActivity, canJoin, duration, archived);
         return ResponseEntity.ok(allactividades);
     }
 
@@ -80,6 +83,21 @@ public class ActividadController {
         List<InscripcionActividadOutDto> inscripciones = inscripcionActividadService.listarInscripciones(id);
         logger.info("GET/actividades/{id}/inscripciones");
         return ResponseEntity.ok(inscripciones);
+    }
+
+    @PutMapping("/v1/actividades/{idActivity}/inscripciones/{idInscripcion}")
+    public ResponseEntity<InscripcionActividadOutDto> editInscripcion(@PathVariable long idActivity,
+            @PathVariable long idInscripcion, @Valid @RequestBody InscripcionActividadRequestDto requestDto)
+            throws MethodArgumentNotValidException {
+        InscripcionActividadOutDto updatedInscripcion = inscripcionActividadService.modify(
+                idActivity,
+                idInscripcion,
+                requestDto.getParticipanteId(),
+                requestDto.getState(),
+                requestDto.getPrice()
+        );
+        logger.info("PUT/actividades/{idActivity}/inscripciones/{idInscripcion}");
+        return ResponseEntity.ok(updatedInscripcion);
     }
 
     @PutMapping("/v1/actividades/{id}")

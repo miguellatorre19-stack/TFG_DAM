@@ -1,5 +1,8 @@
 package com.svalero.asociation.controller;
 
+import com.svalero.asociation.dto.AccessCodeResponseDto;
+import com.svalero.asociation.dto.BajaRequestDto;
+import com.svalero.asociation.dto.TrabajadorAccessResponseDto;
 import com.svalero.asociation.dto.TrabajadorDto;
 import com.svalero.asociation.dto.TrabajadorOutDto;
 import com.svalero.asociation.service.TrabajadorService;
@@ -29,8 +32,11 @@ public class TrabajadorController {
     public ResponseEntity<List<TrabajadorOutDto>> getAll(
             @RequestParam(value = "entryDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate entryDate,
             @RequestParam(value = "name", required = false) String name,
-            @RequestParam(value = "contractType", required = false) String contractType){
-        List<TrabajadorOutDto> alltrabajadores = trabajadorService.findAllDto(entryDate, name, contractType);
+            @RequestParam(value = "contractType", required = false) String contractType,
+            @RequestParam(value = "active", required = false) Boolean active){
+        List<TrabajadorOutDto> alltrabajadores = active == null
+                ? trabajadorService.findAllDto(entryDate, name, contractType)
+                : trabajadorService.findAllDto(entryDate, name, contractType, active);
         logger.info("GET/trabajadores");
         return ResponseEntity.ok(alltrabajadores);
     }
@@ -47,8 +53,8 @@ public class TrabajadorController {
     }
 
     @PostMapping("/v1/servicios/{id}/trabajadores")
-    public ResponseEntity<TrabajadorOutDto> addTrabajadors(@Valid@RequestBody TrabajadorDto trabajadorDto, @PathVariable long id) throws MethodArgumentNotValidException{
-        TrabajadorOutDto newtrabajador = trabajadorService.addDto(trabajadorDto, id);
+    public ResponseEntity<TrabajadorAccessResponseDto> addTrabajadors(@Valid@RequestBody TrabajadorDto trabajadorDto, @PathVariable long id) throws MethodArgumentNotValidException{
+        TrabajadorAccessResponseDto newtrabajador = trabajadorService.addDtoWithAccess(trabajadorDto, id);
         logger.info("POST/trabajadores");
         return new ResponseEntity<>(newtrabajador, HttpStatus.CREATED);
     }
@@ -60,10 +66,24 @@ public class TrabajadorController {
         return ResponseEntity.ok(updatedtrabajador);
     }
 
-    @DeleteMapping("/v1/trabajadores/{id}")
-    public ResponseEntity<Void> deleteTrabajador (@PathVariable long id){
-        trabajadorService.delete(id);
-        logger.info("DELETE/trabajadores/{id}");
+    @PostMapping("/v1/trabajadores/{id}/access-code")
+    public ResponseEntity<AccessCodeResponseDto> regenerateTrabajadorAccessCode(@PathVariable long id) {
+        logger.info("POST/trabajadores/{id}/access-code");
+        AccessCodeResponseDto accessCode = trabajadorService.regenerateAccessCode(id);
+        return ResponseEntity.ok(accessCode);
+    }
+
+    @PostMapping("/v1/trabajadores/{id}/baja")
+    public ResponseEntity<Void> bajaTrabajador(@PathVariable long id, @Valid @RequestBody BajaRequestDto bajaRequestDto) {
+        trabajadorService.darDeBaja(id, bajaRequestDto);
+        logger.info("POST/trabajadores/{id}/baja");
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/v1/trabajadores/{id}/reactivar")
+    public ResponseEntity<Void> reactivarTrabajador(@PathVariable long id) {
+        trabajadorService.reactivar(id);
+        logger.info("POST/trabajadores/{id}/reactivar");
         return ResponseEntity.noContent().build();
     }
 
